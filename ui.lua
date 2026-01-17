@@ -798,8 +798,7 @@ function HI:SwitchTab(Tab)
         if T.Icon then
             Tween(T.Icon, {ImageColor3 = HI.Themes[self.Config.Theme].SubText, Size = UDim2.new(0, 24, 0, 24)})
         end
-       Tab.Label.Font = self.Config.TitleFont  -- Set font directly
-Tween(Tab.Label, {TextColor3 = HI.Themes[self.Config.Theme].Text})  -- Only tween color
+        Tween(Tab.Label, {TextColor3 = HI.Themes[self.Config.Theme].Text})  -- Only tween color
     end
     
     Tab.Content.Visible = true
@@ -809,7 +808,7 @@ Tween(Tab.Label, {TextColor3 = HI.Themes[self.Config.Theme].Text})  -- Only twee
         Tween(Tab.Icon, {ImageColor3 = HI.Themes[self.Config.Theme].Accent, Size = UDim2.new(0, 28, 0, 28)}, 0.15)
     end
     Tab.Label.Font = self.Config.TitleFont  -- Set font directly
-Tween(Tab.Label, {TextColor3 = HI.Themes[self.Config.Theme].Text})  -- Only tween color
+    Tween(Tab.Label, {TextColor3 = HI.Themes[self.Config.Theme].Text})  -- Only tween color
     
     self.CurrentTab = Tab
     return self
@@ -862,11 +861,11 @@ function HI:CreateSection(Tab, SectionName)
     Divider.Parent = Section.Frame
     
     Section.Content = Instance.new("Frame")
-Section.Content.Name = "Content"
-Section.Content.Size = UDim2.new(1, -40, 0, 0) -- Changed from -20 to -40 for more padding
-Section.Content.Position = UDim2.new(0, 20, 0, 55) -- Changed from 10 to 20
-Section.Content.BackgroundTransparency = 1
-Section.Content.Parent = Section.Frame
+    Section.Content.Name = "Content"
+    Section.Content.Size = UDim2.new(1, -40, 0, 0) -- Changed from -20 to -40 for more padding
+    Section.Content.Position = UDim2.new(0, 20, 0, 55) -- Changed from 10 to 20
+    Section.Content.BackgroundTransparency = 1
+    Section.Content.Parent = Section.Frame
     
     local ContentLayout = Instance.new("UIListLayout")
     ContentLayout.Padding = UDim.new(0, 14)
@@ -1000,18 +999,29 @@ function HI:AddToggle(Section, Name, Default, Callback)
     ToggleCircle.BackgroundColor3 = HI.Themes[self.Config.Theme].Text
     ToggleCircle.ZIndex = 2
     
-   
+    -- Toggle glow effect
+    local ToggleGlow = Instance.new("Frame")
+    ToggleGlow.Name = "ToggleGlow"
+    ToggleGlow.Size = UDim2.new(1, 10, 1, 10)
+    ToggleGlow.Position = UDim2.new(0, -5, 0, -5)
+    ToggleGlow.BackgroundColor3 = HI.Themes[self.Config.Theme].Success
+    ToggleGlow.BackgroundTransparency = 0.9
+    ToggleGlow.BorderSizePixel = 0
+    local ToggleGlowCorner = Instance.new("UICorner")
+    ToggleGlowCorner.CornerRadius = UDim.new(1, 0)
+    ToggleGlowCorner.Parent = ToggleGlow
+    ToggleGlow.Parent = ToggleContainer
     
     local function UpdateToggle()
         if Toggle.Value then
             Tween(ToggleContainer, {BackgroundColor3 = HI.Themes[self.Config.Theme].Success}, 0.2, Enum.EasingStyle.Quad)
             Tween(ToggleCircle, {Position = UDim2.new(1, -26, 0.5, -12), BackgroundColor3 = Color3.new(1, 1, 1)}, 0.2, Enum.EasingStyle.Back)
-            
-           
+            ToggleGlow.Visible = true
+            Tween(ToggleGlow, {BackgroundTransparency = 0.7, Size = UDim2.new(1, 12, 1, 12)}, 0.3)
         else
             Tween(ToggleContainer, {BackgroundColor3 = HI.Themes[self.Config.Theme].Border}, 0.2)
             Tween(ToggleCircle, {Position = UDim2.new(0, 2, 0.5, -12), BackgroundColor3 = HI.Themes[self.Config.Theme].Text}, 0.2, Enum.EasingStyle.Back)
-           
+            ToggleGlow.Visible = false
         end
     end
     
@@ -1093,21 +1103,21 @@ function HI:AddSlider(Section, Name, Min, Max, Default, Decimals, Callback)
     end
     
     -- Slider Thumb (Handle)
-   -- Change slider position to be more centered
-local SliderContainer = CreateRoundedFrame(Container, UDim2.new(1, -40, 0, 6), UDim2.new(0, 20, 0, 40), 3) -- Added left margin
-
--- Make slider thumb larger and more visible
-local SliderThumb = CreateRoundedFrame(Container, UDim2.new(0, 28, 0, 28), 
-    UDim2.new((Slider.Value - Min) / (Max - Min), -14, 0, 34), 14) -- Bigger thumb
-
--- Ensure thumb stays within bounds
-local function UpdateSlider(Value)
-    Value = math.clamp(Value, Min, Max)
-    Slider.Value = Value
-    local Ratio = math.clamp((Value - Min) / (Max - Min), 0, 1) -- Clamp ratio
+    -- Change slider position to be more centered
+    local SliderContainer = CreateRoundedFrame(Container, UDim2.new(1, -40, 0, 6), UDim2.new(0, 20, 0, 40), 3) -- Added left margin
     
-    Tween(SliderThumb, {Position = UDim2.new(Ratio, -14, 0, 34)})
-end
+    -- Make slider thumb larger and more visible
+    local SliderThumb = CreateRoundedFrame(Container, UDim2.new(0, 28, 0, 28), 
+        UDim2.new((Slider.Value - Min) / (Max - Min), -14, 0, 34), 14) -- Bigger thumb
+    
+    -- Ensure thumb stays within bounds
+    local function UpdateSlider(Value)
+        Value = math.clamp(Value, Min, Max)
+        Slider.Value = Value
+        local Ratio = math.clamp((Value - Min) / (Max - Min), 0, 1) -- Clamp ratio
+        
+        Tween(SliderThumb, {Position = UDim2.new(Ratio, -14, 0, 34)})
+    end
     
     -- Thumb glow
     local ThumbGlow = Instance.new("Frame")
