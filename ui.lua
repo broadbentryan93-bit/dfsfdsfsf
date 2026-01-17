@@ -798,7 +798,8 @@ Tween(Tab.Label, {TextColor3 = HI.Themes[self.Config.Theme].Text})  -- Only twee
     if Tab.Icon then
         Tween(Tab.Icon, {ImageColor3 = HI.Themes[self.Config.Theme].Accent, Size = UDim2.new(0, 28, 0, 28)}, 0.15)
     end
-    Tween(Tab.Label, {TextColor3 = HI.Themes[self.Config.Theme].Accent, Font = self.Config.TitleFont})
+    Tab.Label.Font = self.Config.TitleFont  -- Set font directly
+Tween(Tab.Label, {TextColor3 = HI.Themes[self.Config.Theme].Text})  -- Only tween color
     
     self.CurrentTab = Tab
     return self
