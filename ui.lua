@@ -1,10 +1,21 @@
--- HI Library v4.0 - Premium Customizable UI Library
--- Save this to GitHub or use as a local module
+-- HI Library v4.1 - Fixed Font Issue
+-- Premium Customizable UI Library for Roblox
 
 local HI = {}
 HI.__index = HI
 
--- Icon Repository
+-- Available Roblox Fonts
+HI.Fonts = {
+    Default = Enum.Font.Gotham,
+    Bold = Enum.Font.GothamBold,
+    SemiBold = Enum.Font.GothamSemibold,
+    Monospace = Enum.Font.Code,
+    Arial = Enum.Font.Arial,
+    SourceSans = Enum.Font.SourceSans,
+    Roboto = Enum.Font.Roboto
+}
+
+-- Icon Repository (using default Roblox icons)
 HI.Icons = {
     Home = "rbxassetid://10734929074",
     Visual = "rbxassetid://10734929308",
@@ -96,7 +107,7 @@ HI.DefaultConfig = {
     RoundedCorners = true,
     SearchEnabled = true,
     Draggable = true,
-    Watermark = "HI Library v4.0"
+    Watermark = "HI Library v4.1"
 }
 
 -- Utility Functions
@@ -871,7 +882,7 @@ function HI:AddSlider(Section, Name, Min, Max, Default, Decimals, Callback)
     ValueLabel.BackgroundTransparency = 1
     ValueLabel.Text = Round(Slider.Value, Decimals)
     ValueLabel.TextColor3 = HI.Themes[self.Config.Theme].SubText
-    ValueLabel.Font = Enum.Font.GothamMono
+    ValueLabel.Font = Enum.Font.Code  -- Fixed: Changed from GothamMono to Code (monospace font)
     ValueLabel.TextSize = self.Config.TextSize
     ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
     ValueLabel.Parent = Container
