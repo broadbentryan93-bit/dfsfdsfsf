@@ -1007,12 +1007,12 @@ function HI:AddToggle(Section, Name, Default, Callback)
         if Toggle.Value then
             Tween(ToggleContainer, {BackgroundColor3 = HI.Themes[self.Config.Theme].Success}, 0.2, Enum.EasingStyle.Quad)
             Tween(ToggleCircle, {Position = UDim2.new(1, -26, 0.5, -12), BackgroundColor3 = Color3.new(1, 1, 1)}, 0.2, Enum.EasingStyle.Back)
-            ToggleGlow.Visible = true
-            Tween(ToggleGlow, {BackgroundTransparency = 0.7, Size = UDim2.new(1, 10, 1, 10)}, 0.3)
+            
+           
         else
             Tween(ToggleContainer, {BackgroundColor3 = HI.Themes[self.Config.Theme].Border}, 0.2)
             Tween(ToggleCircle, {Position = UDim2.new(0, 2, 0.5, -12), BackgroundColor3 = HI.Themes[self.Config.Theme].Text}, 0.2, Enum.EasingStyle.Back)
-            ToggleGlow.Visible = false
+           
         end
     end
     
