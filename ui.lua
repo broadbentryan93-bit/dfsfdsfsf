@@ -1000,7 +1000,6 @@ function HI:AddToggle(Section, Name, Default, Callback)
     ToggleCircle.BackgroundColor3 = HI.Themes[self.Config.Theme].Text
     ToggleCircle.ZIndex = 2
     
-    -- Toggle glow effect
    
     
     local function UpdateToggle()
