@@ -1,6 +1,6 @@
--- HI Library v1.0
--- Modern Roblox UI Library
--- Style based on Football Magnet UI
+-- HI Library v2.0
+-- Enhanced with Tab Movement on Right Shift
+-- Modern Roblox UI Library with position toggle feature
 
 local HI = {}
 HI.__index = HI
@@ -40,7 +40,9 @@ HI.Config = {
     TextSize = 12,
     TitleSize = 14,
     BorderSize = 1,
-    AnimationSpeed = 0.2
+    AnimationSpeed = 0.15,
+    TabWidth = 380,
+    TabHeight = 500
 }
 
 -- Utility Functions
@@ -63,6 +65,13 @@ end
 function HI.new(Title)
     local self = setmetatable({}, HI)
     
+    -- Window Positions
+    self.Positions = {
+        Left = UDim2.new(0.5, -HI.Config.TabWidth/2, 0.5, -HI.Config.TabHeight/2), -- Center
+        Right = UDim2.new(1, -HI.Config.TabWidth - 20, 0.5, -HI.Config.TabHeight/2) -- Right side
+    }
+    self.CurrentPosition = "Left"
+    
     -- Create ScreenGui
     self.ScreenGui = Instance.new("ScreenGui")
     self.ScreenGui.Name = "HILibrary"
@@ -73,8 +82,8 @@ function HI.new(Title)
     -- Main Window
     self.MainWindow = Instance.new("Frame")
     self.MainWindow.Name = "MainWindow"
-    self.MainWindow.Size = UDim2.new(0, 450, 0, 550)
-    self.MainWindow.Position = UDim2.new(0.5, -225, 0.5, -275)
+    self.MainWindow.Size = UDim2.new(0, HI.Config.TabWidth, 0, HI.Config.TabHeight)
+    self.MainWindow.Position = self.Positions.Left
     self.MainWindow.BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Main
     self.MainWindow.BorderColor3 = HI.ColorSchemes[HI.Config.Theme].Border
     self.MainWindow.BorderSizePixel = HI.Config.BorderSize
@@ -84,7 +93,7 @@ function HI.new(Title)
     -- Make Window Draggable
     self:Draggify(self.MainWindow)
     
-    -- Title Bar
+    -- Title Bar with Tab Indicator
     self.TitleBar = Instance.new("Frame")
     self.TitleBar.Name = "TitleBar"
     self.TitleBar.Size = UDim2.new(1, 0, 0, 35)
@@ -92,17 +101,36 @@ function HI.new(Title)
     self.TitleBar.BorderSizePixel = 0
     self.TitleBar.Parent = self.MainWindow
     
+    local TitleContainer = Instance.new("Frame")
+    TitleContainer.Name = "TitleContainer"
+    TitleContainer.Size = UDim2.new(1, -80, 1, 0)
+    TitleContainer.BackgroundTransparency = 1
+    TitleContainer.Position = UDim2.new(0, 10, 0, 0)
+    TitleContainer.Parent = self.TitleBar
+    
     local TitleLabel = Instance.new("TextLabel")
     TitleLabel.Name = "Title"
-    TitleLabel.Size = UDim2.new(1, -80, 1, 0)
-    TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+    TitleLabel.Size = UDim2.new(1, 0, 1, 0)
     TitleLabel.BackgroundTransparency = 1
     TitleLabel.Text = Title or "HI Library"
     TitleLabel.TextColor3 = HI.ColorSchemes[HI.Config.Theme].Text
     TitleLabel.Font = Enum.Font.GothamSemibold
     TitleLabel.TextSize = HI.Config.TitleSize
     TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    TitleLabel.Parent = self.TitleBar
+    TitleLabel.Parent = TitleContainer
+    
+    local PositionIndicator = Instance.new("TextLabel")
+    self.PositionIndicator = PositionIndicator
+    PositionIndicator.Name = "PositionIndicator"
+    PositionIndicator.Size = UDim2.new(0, 100, 0, 15)
+    PositionIndicator.Position = UDim2.new(0, 0, 1, -15)
+    PositionIndicator.BackgroundTransparency = 1
+    PositionIndicator.Text = "[Left Side]"
+    PositionIndicator.TextColor3 = HI.ColorSchemes[HI.Config.Theme].SubText
+    PositionIndicator.Font = Enum.Font.Gotham
+    PositionIndicator.TextSize = 10
+    PositionIndicator.TextTransparency = 0.7
+    PositionIndicator.Parent = TitleContainer
     
     -- Close Button
     self.CloseButton = Instance.new("TextButton")
@@ -124,24 +152,24 @@ function HI.new(Title)
         Tween(self.CloseButton, {TextColor3 = HI.ColorSchemes[HI.Config.Theme].SubText})
     end)
     
-    -- Tab Container
-    self.TabContainer = Instance.new("Frame")
-    self.TabContainer.Name = "TabContainer"
-    self.TabContainer.Size = UDim2.new(1, -20, 0, 35)
-    self.TabContainer.Position = UDim2.new(0, 10, 0, 40)
-    self.TabContainer.BackgroundTransparency = 1
-    self.TabContainer.Parent = self.MainWindow
+    -- Tabs Container (like your image - horizontal at top)
+    self.TabsContainer = Instance.new("Frame")
+    self.TabsContainer.Name = "TabsContainer"
+    self.TabsContainer.Size = UDim2.new(1, -20, 0, 28)
+    self.TabsContainer.Position = UDim2.new(0, 10, 0, 40)
+    self.TabsContainer.BackgroundTransparency = 1
+    self.TabsContainer.Parent = self.MainWindow
     
-    local TabListLayout = Instance.new("UIListLayout")
-    TabListLayout.FillDirection = Enum.FillDirection.Horizontal
-    TabListLayout.Padding = UDim.new(0, 5)
-    TabListLayout.Parent = self.TabContainer
+    local TabsListLayout = Instance.new("UIListLayout")
+    TabsListLayout.FillDirection = Enum.FillDirection.Horizontal
+    TabsListLayout.Padding = UDim.new(0, 5)
+    TabsListLayout.Parent = self.TabsContainer
     
     -- Content Area
     self.ContentContainer = Instance.new("Frame")
     self.ContentContainer.Name = "ContentContainer"
-    self.ContentContainer.Size = UDim2.new(1, -20, 1, -85)
-    self.ContentContainer.Position = UDim2.new(0, 10, 0, 80)
+    self.ContentContainer.Size = UDim2.new(1, -20, 1, -80)
+    self.ContentContainer.Position = UDim2.new(0, 10, 0, 73)
     self.ContentContainer.BackgroundTransparency = 1
     self.ContentContainer.Parent = self.MainWindow
     
@@ -167,7 +195,7 @@ function HI.new(Title)
     self.Watermark.Size = UDim2.new(1, 0, 0, 20)
     self.Watermark.Position = UDim2.new(0, 0, 1, -25)
     self.Watermark.BackgroundTransparency = 1
-    self.Watermark.Text = "HI Library v1.0"
+    self.Watermark.Text = "HI Library v2.0 • RightShift: Move Tab"
     self.Watermark.TextColor3 = HI.ColorSchemes[HI.Config.Theme].SubText
     self.Watermark.Font = Enum.Font.Gotham
     self.Watermark.TextSize = 10
@@ -185,7 +213,34 @@ function HI.new(Title)
         self:Toggle()
     end)
     
+    -- Right Shift Toggle Position
+    self:SetupPositionToggle()
+    
     return self
+end
+
+-- Setup Right Shift Position Toggle
+function HI:SetupPositionToggle()
+    local UserInputService = game:GetService("UserInputService")
+    
+    UserInputService.InputBegan:Connect(function(Input, Processed)
+        if not Processed and Input.KeyCode == Enum.KeyCode.RightShift then
+            self:TogglePosition()
+        end
+    end)
+end
+
+-- Toggle Window Position
+function HI:TogglePosition()
+    if self.CurrentPosition == "Left" then
+        self.CurrentPosition = "Right"
+        self.PositionIndicator.Text = "[Right Side]"
+        Tween(self.MainWindow, {Position = self.Positions.Right})
+    else
+        self.CurrentPosition = "Left"
+        self.PositionIndicator.Text = "[Left Side]"
+        Tween(self.MainWindow, {Position = self.Positions.Left})
+    end
 end
 
 -- Make Window Draggable
@@ -234,7 +289,6 @@ end
 function HI:SetTheme(ThemeName)
     if HI.ColorSchemes[ThemeName] then
         HI.Config.Theme = ThemeName
-        -- Update all existing UI elements
         self:UpdateTheme()
     end
 end
@@ -245,21 +299,21 @@ function HI:UpdateTheme()
     Tween(self.TitleBar, {BackgroundColor3 = Theme.Secondary})
 end
 
--- Tab System
+-- Tab System (matching your image style)
 function HI:NewTab(TabName)
     local Tab = {}
     
-    -- Tab Button
+    -- Tab Button (compact like your image)
     Tab.Button = Instance.new("TextButton")
     Tab.Button.Name = TabName .. "Tab"
-    Tab.Button.Size = UDim2.new(0, 80, 1, 0)
+    Tab.Button.Size = UDim2.new(0, 70, 1, 0)
     Tab.Button.BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Tertiary
     Tab.Button.BorderSizePixel = 0
     Tab.Button.Text = TabName
     Tab.Button.TextColor3 = HI.ColorSchemes[HI.Config.Theme].SubText
-    Tab.Button.Font = HI.Config.Font
-    Tab.Button.TextSize = HI.Config.TextSize
-    Tab.Button.Parent = self.TabContainer
+    Tab.Button.Font = Enum.Font.Gotham
+    Tab.Button.TextSize = 12
+    Tab.Button.Parent = self.TabsContainer
     
     -- Tab Content
     Tab.Content = Instance.new("Frame")
@@ -320,7 +374,7 @@ function HI:SwitchTab(Tab)
     self.CurrentTab = Tab
 end
 
--- Section Creation
+-- Section Creation (like your image - minimal headers)
 function HI:NewSection(Tab, SectionName)
     local Section = {}
     
@@ -333,22 +387,23 @@ function HI:NewSection(Tab, SectionName)
     Section.Frame.ClipsDescendants = true
     Section.Frame.Parent = Tab.Content
     
+    -- Minimal header like your image
     local Title = Instance.new("TextLabel")
     Title.Name = "Title"
-    Title.Size = UDim2.new(1, -20, 0, 25)
-    Title.Position = UDim2.new(0, 10, 0, 8)
+    Title.Size = UDim2.new(1, -20, 0, 20)
+    Title.Position = UDim2.new(0, 10, 0, 5)
     Title.BackgroundTransparency = 1
     Title.Text = SectionName
     Title.TextColor3 = HI.ColorSchemes[HI.Config.Theme].Text
     Title.Font = Enum.Font.GothamSemibold
-    Title.TextSize = HI.Config.TextSize + 1
+    Title.TextSize = 13
     Title.TextXAlignment = Enum.TextXAlignment.Left
     Title.Parent = Section.Frame
     
     Section.Content = Instance.new("Frame")
     Section.Content.Name = "Content"
     Section.Content.Size = UDim2.new(1, -20, 0, 0)
-    Section.Content.Position = UDim2.new(0, 10, 0, 35)
+    Section.Content.Position = UDim2.new(0, 10, 0, 25)
     Section.Content.BackgroundTransparency = 1
     Section.Content.Parent = Section.Frame
     
@@ -359,27 +414,28 @@ function HI:NewSection(Tab, SectionName)
     -- Auto-size section
     ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         Section.Content.Size = UDim2.new(1, -20, 0, ContentLayout.AbsoluteContentSize.Y)
-        Section.Frame.Size = UDim2.new(1, 0, 0, 35 + ContentLayout.AbsoluteContentSize.Y)
+        Section.Frame.Size = UDim2.new(1, 0, 0, 25 + ContentLayout.AbsoluteContentSize.Y)
     end)
     
     self.Sections[SectionName] = Section
     return Section
 end
 
--- UI Components
-function HI:NewToggle(Section, Name, Default, Callback)
-    local Toggle = {}
-    Toggle.Value = Default or false
+-- Enhanced Slider (with format like your image "10.6/20")
+function HI:NewSlider(Section, Name, Min, Max, Default, Decimals, Callback)
+    local Slider = {}
+    Slider.Value = Default or Min
+    Decimals = Decimals or 1
     
     local Container = Instance.new("Frame")
-    Container.Name = Name .. "Toggle"
-    Container.Size = UDim2.new(1, 0, 0, 25)
+    Container.Name = Name .. "Slider"
+    Container.Size = UDim2.new(1, 0, 0, 50)
     Container.BackgroundTransparency = 1
     Container.Parent = Section.Content
     
     local Label = Instance.new("TextLabel")
     Label.Name = "Label"
-    Label.Size = UDim2.new(0.7, 0, 1, 0)
+    Label.Size = UDim2.new(1, 0, 0, 20)
     Label.BackgroundTransparency = 1
     Label.Text = Name
     Label.TextColor3 = HI.ColorSchemes[HI.Config.Theme].Text
@@ -388,73 +444,21 @@ function HI:NewToggle(Section, Name, Default, Callback)
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Container
     
-    local ToggleFrame = Instance.new("Frame")
-    ToggleFrame.Name = "ToggleFrame"
-    ToggleFrame.Size = UDim2.new(0, 40, 0, 20)
-    ToggleFrame.Position = UDim2.new(1, -45, 0.5, -10)
-    ToggleFrame.BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Border
-    ToggleFrame.BorderSizePixel = 0
-    ToggleFrame.Parent = Container
-    
-    local ToggleCircle = Instance.new("Frame")
-    ToggleCircle.Name = "ToggleCircle"
-    ToggleCircle.Size = UDim2.new(0, 16, 0, 16)
-    ToggleCircle.Position = UDim2.new(0, 2, 0.5, -8)
-    ToggleCircle.BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Text
-    ToggleCircle.BorderSizePixel = 0
-    ToggleCircle.Parent = ToggleFrame
-    
-    local function UpdateToggle()
-        if Toggle.Value then
-            Tween(ToggleFrame, {BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Success})
-            Tween(ToggleCircle, {Position = UDim2.new(1, -18, 0.5, -8)})
-        else
-            Tween(ToggleFrame, {BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Border})
-            Tween(ToggleCircle, {Position = UDim2.new(0, 2, 0.5, -8)})
-        end
-    end
-    
-    UpdateToggle()
-    
-    Container.InputBegan:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-            Toggle.Value = not Toggle.Value
-            UpdateToggle()
-            
-            if Callback then
-                Callback(Toggle.Value)
-            end
-        end
-    end)
-    
-    return Toggle
-end
-
-function HI:NewSlider(Section, Name, Min, Max, Default, Decimals, Callback)
-    local Slider = {}
-    Slider.Value = Default or Min
-    Decimals = Decimals or 0
-    
-    local Container = Instance.new("Frame")
-    Container.Name = Name .. "Slider"
-    Container.Size = UDim2.new(1, 0, 0, 45)
-    Container.BackgroundTransparency = 1
-    Container.Parent = Section.Content
-    
-    local Label = Instance.new("TextLabel")
-    Label.Name = "Label"
-    Label.Size = UDim2.new(1, 0, 0, 20)
-    Label.BackgroundTransparency = 1
-    Label.Text = Name .. ": " .. Round(Slider.Value, Decimals)
-    Label.TextColor3 = HI.ColorSchemes[HI.Config.Theme].Text
-    Label.Font = HI.Config.Font
-    Label.TextSize = HI.Config.TextSize
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Container
+    local ValueLabel = Instance.new("TextLabel")
+    ValueLabel.Name = "ValueLabel"
+    ValueLabel.Size = UDim2.new(0, 60, 0, 20)
+    ValueLabel.Position = UDim2.new(1, -60, 0, 0)
+    ValueLabel.BackgroundTransparency = 1
+    ValueLabel.Text = Round(Slider.Value, Decimals) .. "/" .. Max
+    ValueLabel.TextColor3 = HI.ColorSchemes[HI.Config.Theme].SubText
+    ValueLabel.Font = HI.Config.Font
+    ValueLabel.TextSize = HI.Config.TextSize - 1
+    ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    ValueLabel.Parent = Container
     
     local SliderBackground = Instance.new("Frame")
     SliderBackground.Name = "SliderBackground"
-    SliderBackground.Size = UDim2.new(1, 0, 0, 4)
+    SliderBackground.Size = UDim2.new(1, 0, 0, 6)
     SliderBackground.Position = UDim2.new(0, 0, 0, 30)
     SliderBackground.BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Border
     SliderBackground.BorderSizePixel = 0
@@ -469,8 +473,8 @@ function HI:NewSlider(Section, Name, Min, Max, Default, Decimals, Callback)
     
     local SliderButton = Instance.new("TextButton")
     SliderButton.Name = "SliderButton"
-    SliderButton.Size = UDim2.new(0, 16, 0, 16)
-    SliderButton.Position = UDim2.new((Slider.Value - Min) / (Max - Min), -8, 0.5, -8)
+    SliderButton.Size = UDim2.new(0, 14, 0, 14)
+    SliderButton.Position = UDim2.new((Slider.Value - Min) / (Max - Min), -7, 0.5, -7)
     SliderButton.BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Text
     SliderButton.BorderSizePixel = 0
     SliderButton.Text = ""
@@ -481,9 +485,9 @@ function HI:NewSlider(Section, Name, Min, Max, Default, Decimals, Callback)
         Slider.Value = Value
         local Ratio = (Value - Min) / (Max - Min)
         
-        Label.Text = Name .. ": " .. Round(Value, Decimals)
+        ValueLabel.Text = Round(Value, Decimals) .. "/" .. Max
         Tween(SliderFill, {Size = UDim2.new(Ratio, 0, 1, 0)})
-        Tween(SliderButton, {Position = UDim2.new(Ratio, -8, 0.5, -8)})
+        Tween(SliderButton, {Position = UDim2.new(Ratio, -7, 0.5, -7)})
         
         if Callback then
             Callback(Value)
@@ -491,7 +495,6 @@ function HI:NewSlider(Section, Name, Min, Max, Default, Decimals, Callback)
     end
     
     local Dragging = false
-    local InputBeganConnection
     
     local function StartDrag()
         Dragging = true
@@ -535,6 +538,71 @@ function HI:NewSlider(Section, Name, Min, Max, Default, Decimals, Callback)
     return Slider
 end
 
+-- Enhanced Toggle (more compact)
+function HI:NewToggle(Section, Name, Default, Callback)
+    local Toggle = {}
+    Toggle.Value = Default or false
+    
+    local Container = Instance.new("Frame")
+    Container.Name = Name .. "Toggle"
+    Container.Size = UDim2.new(1, 0, 0, 25)
+    Container.BackgroundTransparency = 1
+    Container.Parent = Section.Content
+    
+    local Label = Instance.new("TextLabel")
+    Label.Name = "Label"
+    Label.Size = UDim2.new(1, -50, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = Name
+    Label.TextColor3 = HI.ColorSchemes[HI.Config.Theme].Text
+    Label.Font = HI.Config.Font
+    Label.TextSize = HI.Config.TextSize
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Container
+    
+    local ToggleFrame = Instance.new("Frame")
+    ToggleFrame.Name = "ToggleFrame"
+    ToggleFrame.Size = UDim2.new(0, 35, 0, 18)
+    ToggleFrame.Position = UDim2.new(1, -40, 0.5, -9)
+    ToggleFrame.BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Border
+    ToggleFrame.BorderSizePixel = 0
+    ToggleFrame.Parent = Container
+    
+    local ToggleCircle = Instance.new("Frame")
+    ToggleCircle.Name = "ToggleCircle"
+    ToggleCircle.Size = UDim2.new(0, 14, 0, 14)
+    ToggleCircle.Position = UDim2.new(0, 2, 0.5, -7)
+    ToggleCircle.BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Text
+    ToggleCircle.BorderSizePixel = 0
+    ToggleCircle.Parent = ToggleFrame
+    
+    local function UpdateToggle()
+        if Toggle.Value then
+            Tween(ToggleFrame, {BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Success})
+            Tween(ToggleCircle, {Position = UDim2.new(1, -16, 0.5, -7)})
+        else
+            Tween(ToggleFrame, {BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Border})
+            Tween(ToggleCircle, {Position = UDim2.new(0, 2, 0.5, -7)})
+        end
+    end
+    
+    UpdateToggle()
+    
+    Container.InputBegan:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+            Toggle.Value = not Toggle.Value
+            UpdateToggle()
+            
+            if Callback then
+                Callback(Toggle.Value)
+            end
+        end
+    end)
+    
+    return Toggle
+end
+
+-- Enhanced Dropdown (compact)
 function HI:NewDropdown(Section, Name, Options, Default, Callback)
     local Dropdown = {}
     Dropdown.Value = Default or Options[1]
@@ -542,14 +610,14 @@ function HI:NewDropdown(Section, Name, Options, Default, Callback)
     
     local Container = Instance.new("Frame")
     Container.Name = Name .. "Dropdown"
-    Container.Size = UDim2.new(1, 0, 0, 30)
+    Container.Size = UDim2.new(1, 0, 0, 25)
     Container.BackgroundTransparency = 1
     Container.ClipsDescendants = true
     Container.Parent = Section.Content
     
     local Label = Instance.new("TextLabel")
     Label.Name = "Label"
-    Label.Size = UDim2.new(1, -30, 1, 0)
+    Label.Size = UDim2.new(0.6, 0, 1, 0)
     Label.BackgroundTransparency = 1
     Label.Text = Name
     Label.TextColor3 = HI.ColorSchemes[HI.Config.Theme].Text
@@ -560,8 +628,8 @@ function HI:NewDropdown(Section, Name, Options, Default, Callback)
     
     local DropdownButton = Instance.new("TextButton")
     DropdownButton.Name = "DropdownButton"
-    DropdownButton.Size = UDim2.new(1, 0, 0, 30)
-    DropdownButton.Position = UDim2.new(0, 0, 0, 30)
+    DropdownButton.Size = UDim2.new(0.35, 0, 1, 0)
+    DropdownButton.Position = UDim2.new(0.65, 0, 0, 0)
     DropdownButton.BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Tertiary
     DropdownButton.BorderColor3 = HI.ColorSchemes[HI.Config.Theme].Border
     DropdownButton.BorderSizePixel = HI.Config.BorderSize
@@ -571,25 +639,15 @@ function HI:NewDropdown(Section, Name, Options, Default, Callback)
     DropdownButton.TextSize = HI.Config.TextSize
     DropdownButton.Parent = Container
     
-    local DropdownArrow = Instance.new("TextLabel")
-    DropdownArrow.Name = "Arrow"
-    DropdownArrow.Size = UDim2.new(0, 20, 0, 30)
-    DropdownArrow.Position = UDim2.new(1, -25, 0, 0)
-    DropdownArrow.BackgroundTransparency = 1
-    DropdownArrow.Text = "▼"
-    DropdownArrow.TextColor3 = HI.ColorSchemes[HI.Config.Theme].SubText
-    DropdownArrow.Font = HI.Config.Font
-    DropdownArrow.TextSize = 10
-    DropdownArrow.Parent = DropdownButton
-    
     local OptionsFrame = Instance.new("Frame")
     OptionsFrame.Name = "Options"
-    OptionsFrame.Size = UDim2.new(1, 0, 0, 0)
-    OptionsFrame.Position = UDim2.new(0, 0, 0, 60)
+    OptionsFrame.Size = UDim2.new(0.35, 0, 0, 0)
+    OptionsFrame.Position = UDim2.new(0.65, 0, 1, 5)
     OptionsFrame.BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Tertiary
     OptionsFrame.BorderColor3 = HI.ColorSchemes[HI.Config.Theme].Border
     OptionsFrame.BorderSizePixel = HI.Config.BorderSize
     OptionsFrame.Visible = false
+    OptionsFrame.ZIndex = 10
     OptionsFrame.Parent = Container
     
     local OptionsLayout = Instance.new("UIListLayout")
@@ -599,22 +657,21 @@ function HI:NewDropdown(Section, Name, Options, Default, Callback)
     for _, Option in ipairs(Options) do
         local OptionButton = Instance.new("TextButton")
         OptionButton.Name = Option
-        OptionButton.Size = UDim2.new(1, 0, 0, 25)
+        OptionButton.Size = UDim2.new(1, 0, 0, 22)
         OptionButton.BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Tertiary
         OptionButton.BorderSizePixel = 0
         OptionButton.Text = Option
         OptionButton.TextColor3 = HI.ColorSchemes[HI.Config.Theme].SubText
         OptionButton.Font = HI.Config.Font
-        OptionButton.TextSize = HI.Config.TextSize
+        OptionButton.TextSize = HI.Config.TextSize - 1
         OptionButton.Parent = OptionsFrame
         
         OptionButton.MouseButton1Click:Connect(function()
             Dropdown.Value = Option
             DropdownButton.Text = Option
-            Container.Size = UDim2.new(1, 0, 0, 30)
-            Tween(OptionsFrame, {Size = UDim2.new(1, 0, 0, 0)})
+            Container.Size = UDim2.new(1, 0, 0, 25)
+            Tween(OptionsFrame, {Size = UDim2.new(0.35, 0, 0, 0)})
             Dropdown.Open = false
-            DropdownArrow.Text = "▼"
             
             if Callback then
                 Callback(Option)
@@ -630,29 +687,50 @@ function HI:NewDropdown(Section, Name, Options, Default, Callback)
         end)
     end
     
+    -- Close dropdown when clicking outside
+    local CloseConnection
+    local function CloseDropdown()
+        if Dropdown.Open then
+            Container.Size = UDim2.new(1, 0, 0, 25)
+            Tween(OptionsFrame, {Size = UDim2.new(0.35, 0, 0, 0)})
+            Dropdown.Open = false
+            if CloseConnection then
+                CloseConnection:Disconnect()
+            end
+        end
+    end
+    
     -- Toggle Dropdown
     DropdownButton.MouseButton1Click:Connect(function()
         Dropdown.Open = not Dropdown.Open
         
         if Dropdown.Open then
-            Container.Size = UDim2.new(1, 0, 0, 60 + #Options * 25)
+            Container.Size = UDim2.new(1, 0, 0, 30 + #Options * 22)
             OptionsFrame.Visible = true
-            OptionsFrame.Size = UDim2.new(1, 0, 0, #Options * 25)
-            DropdownArrow.Text = "▲"
+            OptionsFrame.Size = UDim2.new(0.35, 0, 0, #Options * 22)
+            
+            -- Close on click outside
+            CloseConnection = game:GetService("UserInputService").InputBegan:Connect(function(Input)
+                if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    local MousePos = game:GetService("Players").LocalPlayer:GetMouse()
+                    if not OptionsFrame.AbsoluteRect:PointInside(MousePos) then
+                        CloseDropdown()
+                    end
+                end
+            end)
         else
-            Container.Size = UDim2.new(1, 0, 0, 30)
-            Tween(OptionsFrame, {Size = UDim2.new(1, 0, 0, 0)})
-            DropdownArrow.Text = "▼"
+            CloseDropdown()
         end
     end)
     
     return Dropdown
 end
 
+-- Enhanced Button
 function HI:NewButton(Section, Name, Callback)
     local Button = Instance.new("TextButton")
     Button.Name = Name .. "Button"
-    Button.Size = UDim2.new(1, 0, 0, 30)
+    Button.Size = UDim2.new(1, 0, 0, 28)
     Button.BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Accent
     Button.BorderSizePixel = 0
     Button.Text = Name
@@ -668,7 +746,7 @@ function HI:NewButton(Section, Name, Callback)
     end)
     
     Button.MouseEnter:Connect(function()
-        Tween(Button, {BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Accent:Lerp(Color3.new(1, 1, 1), 0.2)})
+        Tween(Button, {BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Accent:Lerp(Color3.new(1, 1, 1), 0.15)})
     end)
     
     Button.MouseLeave:Connect(function()
@@ -678,10 +756,11 @@ function HI:NewButton(Section, Name, Callback)
     return Button
 end
 
+-- Label
 function HI:NewLabel(Section, Text)
     local Label = Instance.new("TextLabel")
     Label.Name = "Label"
-    Label.Size = UDim2.new(1, 0, 0, 20)
+    Label.Size = UDim2.new(1, 0, 0, 18)
     Label.BackgroundTransparency = 1
     Label.Text = Text
     Label.TextColor3 = HI.ColorSchemes[HI.Config.Theme].SubText
@@ -693,6 +772,7 @@ function HI:NewLabel(Section, Text)
     return Label
 end
 
+-- Text Box
 function HI:NewTextBox(Section, Name, Placeholder, Callback)
     local Container = Instance.new("Frame")
     Container.Name = Name .. "TextBox"
@@ -713,7 +793,7 @@ function HI:NewTextBox(Section, Name, Placeholder, Callback)
     
     local TextBox = Instance.new("TextBox")
     TextBox.Name = "TextBox"
-    TextBox.Size = UDim2.new(1, 0, 0, 25)
+    TextBox.Size = UDim2.new(1, 0, 0, 22)
     TextBox.Position = UDim2.new(0, 0, 0, 20)
     TextBox.BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Tertiary
     TextBox.BorderColor3 = HI.ColorSchemes[HI.Config.Theme].Border
@@ -740,80 +820,6 @@ function HI:NewTextBox(Section, Name, Placeholder, Callback)
     return TextBox
 end
 
--- Keybind System
-function HI:NewKeybind(Section, Name, DefaultKey, Callback)
-    local Keybind = {}
-    Keybind.Value = DefaultKey or Enum.KeyCode.RightShift
-    Keybind.Listening = false
-    
-    local Container = Instance.new("Frame")
-    Container.Name = Name .. "Keybind"
-    Container.Size = UDim2.new(1, 0, 0, 25)
-    Container.BackgroundTransparency = 1
-    Container.Parent = Section.Content
-    
-    local Label = Instance.new("TextLabel")
-    Label.Name = "Label"
-    Label.Size = UDim2.new(0.7, 0, 1, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = Name
-    Label.TextColor3 = HI.ColorSchemes[HI.Config.Theme].Text
-    Label.Font = HI.Config.Font
-    Label.TextSize = HI.Config.TextSize
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Container
-    
-    local KeybindButton = Instance.new("TextButton")
-    KeybindButton.Name = "KeybindButton"
-    KeybindButton.Size = UDim2.new(0.25, 0, 1, 0)
-    KeybindButton.Position = UDim2.new(0.75, 0, 0, 0)
-    KeybindButton.BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Tertiary
-    KeybindButton.BorderColor3 = HI.ColorSchemes[HI.Config.Theme].Border
-    KeybindButton.BorderSizePixel = HI.Config.BorderSize
-    KeybindButton.Text = Keybind.Value.Name
-    KeybindButton.TextColor3 = HI.ColorSchemes[HI.Config.Theme].SubText
-    KeybindButton.Font = HI.Config.Font
-    KeybindButton.TextSize = HI.Config.TextSize
-    KeybindButton.Parent = Container
-    
-    local function StartListening()
-        Keybind.Listening = true
-        KeybindButton.Text = "..."
-        Tween(KeybindButton, {
-            BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Accent,
-            TextColor3 = HI.ColorSchemes[HI.Config.Theme].Text
-        })
-        
-        local Connection
-        Connection = game:GetService("UserInputService").InputBegan:Connect(function(Input)
-            if Input.UserInputType == Enum.UserInputType.Keyboard then
-                Keybind.Value = Input.KeyCode
-                KeybindButton.Text = Input.KeyCode.Name
-                Keybind.Listening = false
-                
-                Tween(KeybindButton, {
-                    BackgroundColor3 = HI.ColorSchemes[HI.Config.Theme].Tertiary,
-                    TextColor3 = HI.ColorSchemes[HI.Config.Theme].SubText
-                })
-                
-                if Callback then
-                    Callback(Input.KeyCode)
-                end
-                
-                Connection:Disconnect()
-            end
-        end)
-    end
-    
-    KeybindButton.MouseButton1Click:Connect(function()
-        if not Keybind.Listening then
-            StartListening()
-        end
-    end)
-    
-    return Keybind
-end
-
 -- Show UI
 function HI:Show()
     self.ScreenGui.Parent = game:GetService("CoreGui") or game.Players.LocalPlayer:WaitForChild("PlayerGui")
@@ -829,13 +835,64 @@ function HI:Hide()
     return self
 end
 
--- Bind to key to toggle
+-- Bind to key to toggle visibility
 function HI:BindToKey(KeyCode)
-    game:GetService("UserInputService").InputBegan:Connect(function(Input)
-        if Input.KeyCode == KeyCode then
+    game:GetService("UserInputService").InputBegan:Connect(function(Input, Processed)
+        if not Processed and Input.KeyCode == KeyCode then
             self:Toggle()
         end
     end)
+end
+
+-- Example setup based on your image
+function HI:CreateExampleFootballUI()
+    -- Create tabs like your image
+    local CatchingTab = self:NewTab("Catching")
+    local PhysicsTab = self:NewTab("Physics")
+    local UISettingsTab = self:NewTab("UI Settings")
+    
+    -- Catching Tab
+    local MagsSection = self:NewSection(CatchingTab, "Mags")
+    self:NewSlider(MagsSection, "Range", 0, 20, 10.6, 1, function(Value)
+        print("Range:", Value)
+    end)
+    
+    local SpeedSection = self:NewSection(CatchingTab, "Speed")
+    self:NewSlider(SpeedSection, "Speed Value", 0, 1.2, 1.2, 1, function(Value)
+        print("Speed Value:", Value)
+    end)
+    
+    self:NewLabel(SpeedSection, "CFrame Speed")
+    
+    local MagTypeSection = self:NewSection(CatchingTab, "Mag Type")
+    self:NewDropdown(MagTypeSection, "Type", {"Normal", "Blatant", "FTI"}, "Blatant", function(Option)
+        print("Mag Type:", Option)
+    end)
+    
+    -- Physics Tab
+    local PullSection = self:NewSection(PhysicsTab, "Pull")
+    self:NewSlider(PullSection, "Pull Vector", 0, 3, 1.5, 1, function(Value)
+        print("Pull Vector:", Value)
+    end)
+    
+    self:NewSlider(PullSection, "Pull Vector Radius", 0, 25, 14.9, 1, function(Value)
+        print("Pull Vector Radius:", Value)
+    end)
+    
+    -- UI Settings Tab
+    local AutoCatchSection = self:NewSection(UISettingsTab, "Auto Catch")
+    self:NewSlider(AutoCatchSection, "Auto Catch Radius", 0, 25, 21.3, 1, function(Value)
+        print("Auto Catch Radius:", Value)
+    end)
+    
+    local FootballSection = self:NewSection(UISettingsTab, "Football")
+    self:NewLabel(FootballSection, "Ball Path")
+    
+    self:NewButton(UISettingsTab, "Save Configuration", function()
+        print("Configuration saved!")
+    end)
+    
+    return self
 end
 
 return HI
