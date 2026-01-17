@@ -540,7 +540,18 @@ function HI:MakeDraggable(Frame)
     
     local function Update(Input)
         local Delta = Input.Position - DragStart
-        Frame.Position = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
+        local NewPos = UDim2.new(StartPos.X.Scale, StartPos.X.Offset + Delta.X, StartPos.Y.Scale, StartPos.Y.Offset + Delta.Y)
+        
+        -- Keep window within screen bounds
+        local ScreenSize = workspace.CurrentCamera.ViewportSize
+        local WindowSize = Frame.AbsoluteSize
+        local MaxX = ScreenSize.X - WindowSize.X
+        local MaxY = ScreenSize.Y - WindowSize.Y
+        
+        NewPos.X.Offset = math.clamp(NewPos.X.Offset, 0, MaxX)
+        NewPos.Y.Offset = math.clamp(NewPos.Y.Offset, 0, MaxY)
+        
+        Tween(Frame, {Position = NewPos}, 0.05)
     end
     
     Frame.InputBegan:Connect(function(Input)
@@ -568,15 +579,6 @@ function HI:MakeDraggable(Frame)
             Update(Input)
         end
     end)
-    
-    -- Add this helper function to stop propagation on interactive elements
-    self.StopPropagation = function(Element)
-        Element.InputBegan:Connect(function(Input)
-            if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-                Input:StopPropagation()
-            end
-        end)
-    end
 end
 
 -- PUBLIC API METHODS
@@ -738,6 +740,9 @@ function HI:CreateTab(TabName, IconId)
     local ContentLayout = Instance.new("UIListLayout")
     ContentLayout.Padding = UDim.new(0, 24)
     ContentLayout.Parent = Tab.Content
+    
+    -- Stop propagation on interactive elements
+    self:StopPropagation(Tab.Button)
     
     -- Tab Indicator
     Tab.Indicator = Instance.new("Frame")
@@ -939,6 +944,9 @@ function HI:AddButton(Section, Name, Callback, Color)
     HoverCorner.CornerRadius = UDim.new(0, 8)
     HoverCorner.Parent = HoverFrame
     
+    -- Stop propagation on interactive elements
+    self:StopPropagation(Button)
+    
     Button.InputBegan:Connect(function(Input)
         if Input.UserInputType == Enum.UserInputType.MouseButton1 then
             Tween(Button, {Size = UDim2.new(1, 0, 0, 40)}, 0.1)
@@ -1027,6 +1035,9 @@ function HI:AddToggle(Section, Name, Default, Callback)
     
     UpdateToggle()
     
+    -- Stop propagation on interactive elements
+    self:StopPropagation(Container)
+    
     Container.InputBegan:Connect(function(Input)
         if Input.UserInputType == Enum.UserInputType.MouseButton1 then
             Toggle.Value = not Toggle.Value
@@ -1103,20 +1114,27 @@ function HI:AddSlider(Section, Name, Min, Max, Default, Decimals, Callback)
     end
     
     -- Slider Thumb (Handle)
-    -- Change slider position to be more centered
-    local SliderContainer = CreateRoundedFrame(Container, UDim2.new(1, -40, 0, 6), UDim2.new(0, 20, 0, 40), 3) -- Added left margin
-    
-    -- Make slider thumb larger and more visible
     local SliderThumb = CreateRoundedFrame(Container, UDim2.new(0, 28, 0, 28), 
         UDim2.new((Slider.Value - Min) / (Max - Min), -14, 0, 34), 14) -- Bigger thumb
+    
+    -- Stop propagation on interactive elements
+    self:StopPropagation(Container)
+    self:StopPropagation(SliderThumb)
+    self:StopPropagation(SliderTrack)
     
     -- Ensure thumb stays within bounds
     local function UpdateSlider(Value)
         Value = math.clamp(Value, Min, Max)
         Slider.Value = Value
-        local Ratio = math.clamp((Value - Min) / (Max - Min), 0, 1) -- Clamp ratio
+        local Ratio = (Value - Min) / (Max - Min)
         
-        Tween(SliderThumb, {Position = UDim2.new(Ratio, -14, 0, 34)})
+        ValueLabel.Text = Round(Value, Decimals)
+        Tween(SliderFill, {Size = UDim2.new(Ratio, 0, 1, 0)})
+        Tween(SliderThumb, {Position = UDim2.new(Ratio, -12, 0, 34)})
+        
+        if Callback then
+            Callback(Value)
+        end
     end
     
     -- Thumb glow
@@ -1173,13 +1191,14 @@ function HI:AddSlider(Section, Name, Min, Max, Default, Decimals, Callback)
                 Tween(ThumbGlow, {BackgroundTransparency = 0.8, Size = UDim2.new(1, 8, 1, 8)}, 0.2)
                 MoveConnection:Disconnect()
                 EndedConnection:Disconnect()
+                Input:StopPropagation()
             end
         end)
     end
     
     SliderThumb.InputBegan:Connect(function(Input)
         if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-                Input:StopPropagation()
+            Input:StopPropagation()
             StartDrag()
         end
     end)
@@ -1325,6 +1344,9 @@ function HI:AddDropdown(Section, Name, Options, Default, Callback)
             Dropdown.Open = false
         end
     end
+    
+    -- Stop propagation on interactive elements
+    self:StopPropagation(DropdownButton)
     
     -- Toggle Dropdown
     DropdownButton.InputBegan:Connect(function(Input)
