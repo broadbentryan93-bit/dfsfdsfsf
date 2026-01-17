@@ -788,8 +788,8 @@ function HI:SwitchTab(Tab)
         if T.Icon then
             Tween(T.Icon, {ImageColor3 = HI.Themes[self.Config.Theme].SubText, Size = UDim2.new(0, 24, 0, 24)})
         end
-       Tab.Label.Font = self.Config.HeaderFont
-Tween(Tab.Label, {TextColor3 = HI.Themes[self.Config.Theme].Text})
+       Tab.Label.Font = self.Config.TitleFont  -- Set font directly
+Tween(Tab.Label, {TextColor3 = HI.Themes[self.Config.Theme].Text})  -- Only tween color
     end
     
     Tab.Content.Visible = true
