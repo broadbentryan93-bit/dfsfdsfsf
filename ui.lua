@@ -1,24 +1,25 @@
--- HI Library v3.0 - Premium 4K UI
--- Modern Roblox UI Library with advanced customization
--- Based on IMG_2039.jpeg design
+-- HI Library v4.0 - Premium Customizable UI Library
+-- Save this to GitHub or use as a local module
 
 local HI = {}
 HI.__index = HI
 
--- Icon Repository (using Roblox icons, can be replaced with image IDs)
+-- Icon Repository
 HI.Icons = {
-    Catching = "rbxassetid://10723359580", -- Gear icon
-    Physics = "rbxassetid://10723359953", -- Physics icon
-    Settings = "rbxassetid://10734928019", -- Settings icon
-    Search = "rbxassetid://10734928367", -- Search icon
-    Minimize = "rbxassetid://10734928599", -- Minimize icon
-    Close = "rbxassetid://10734928842", -- Close icon
-    Home = "rbxassetid://10734929074", -- Home icon
-    Visual = "rbxassetid://10734929308", -- Eye icon
-    Audio = "rbxassetid://10734929541", -- Audio icon
-    Info = "rbxassetid://10734929775", -- Info icon
-    Star = "rbxassetid://10734930007", -- Star icon
-    Palette = "rbxassetid://10734930239" -- Color palette icon
+    Home = "rbxassetid://10734929074",
+    Visual = "rbxassetid://10734929308",
+    Settings = "rbxassetid://10734928019",
+    Search = "rbxassetid://10734928367",
+    Minimize = "rbxassetid://10734928599",
+    Close = "rbxassetid://10734928842",
+    Audio = "rbxassetid://10734929541",
+    Info = "rbxassetid://10734929775",
+    Star = "rbxassetid://10734930007",
+    Palette = "rbxassetid://10734930239",
+    Game = "rbxassetid://10723359580",
+    Player = "rbxassetid://10723359953",
+    World = "rbxassetid://10734929541",
+    Script = "rbxassetid://10734929775"
 }
 
 -- Premium Color Themes
@@ -81,23 +82,26 @@ HI.Themes = {
     }
 }
 
--- Configuration
-HI.Config = {
+-- Default Configuration
+HI.DefaultConfig = {
     Theme = "Default",
     Font = Enum.Font.Gotham,
     TextSize = 13,
     TitleSize = 16,
     BorderSize = 1,
     AnimationSpeed = 0.2,
-    WindowSize = UDim2.new(0, 900, 0, 600), -- 4K size
+    WindowSize = UDim2.new(0, 900, 0, 600),
     UseIcons = true,
     BlurBackground = true,
-    RoundedCorners = true
+    RoundedCorners = true,
+    SearchEnabled = true,
+    Draggable = true,
+    Watermark = "HI Library v4.0"
 }
 
 -- Utility Functions
 local function Tween(Object, Properties, Duration)
-    Duration = Duration or HI.Config.AnimationSpeed
+    Duration = Duration or HI.DefaultConfig.AnimationSpeed
     local TweenService = game:GetService("TweenService")
     local TweenInfo = TweenInfo.new(Duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
     local Tween = TweenService:Create(Object, TweenInfo, Properties)
@@ -111,16 +115,16 @@ local function Round(Number, DecimalPlaces)
     return math.floor(Number * Multiplier + 0.5) / Multiplier
 end
 
-local function CreateRoundedFrame(Parent, Size, Position)
+local function CreateRoundedFrame(Parent, Size, Position, CornerRadius)
     local Frame = Instance.new("Frame")
     Frame.Size = Size
     Frame.Position = Position
     Frame.BackgroundTransparency = 0
     Frame.ClipsDescendants = true
     
-    if HI.Config.RoundedCorners then
+    if HI.DefaultConfig.RoundedCorners then
         local UICorner = Instance.new("UICorner")
-        UICorner.CornerRadius = UDim.new(0, 8)
+        UICorner.CornerRadius = UDim.new(0, CornerRadius or 8)
         UICorner.Parent = Frame
     end
     
@@ -129,10 +133,37 @@ local function CreateRoundedFrame(Parent, Size, Position)
 end
 
 -- Main Library Class
-function HI.new(Title, IconId)
+function HI.new(Title, Config, IconId)
     local self = setmetatable({}, HI)
     
-    -- Create ScreenGui
+    -- Merge config with defaults
+    self.Config = {}
+    for k, v in pairs(HI.DefaultConfig) do
+        self.Config[k] = Config and Config[k] or v
+    end
+    if Config then
+        for k, v in pairs(Config) do
+            self.Config[k] = v
+        end
+    end
+    
+    -- State
+    self.Tabs = {}
+    self.Sections = {}
+    self.CurrentTab = nil
+    self.IsMinimized = false
+    self.OriginalSize = self.Config.WindowSize
+    self.MinimizedSize = UDim2.new(0, 300, 0, 60)
+    
+    -- Create UI
+    self:CreateUI(Title, IconId)
+    
+    return self
+end
+
+-- Create UI Elements
+function HI:CreateUI(Title, IconId)
+    -- ScreenGui
     self.ScreenGui = Instance.new("ScreenGui")
     self.ScreenGui.Name = "HILibrary"
     self.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -140,7 +171,7 @@ function HI.new(Title, IconId)
     self.ScreenGui.ResetOnSpawn = false
     
     -- Background Blur
-    if HI.Config.BlurBackground then
+    if self.Config.BlurBackground then
         self.BackgroundBlur = Instance.new("BlurEffect")
         self.BackgroundBlur.Size = 8
         self.BackgroundBlur.Parent = game:GetService("Lighting")
@@ -149,28 +180,30 @@ function HI.new(Title, IconId)
     -- Main Container
     self.MainContainer = Instance.new("Frame")
     self.MainContainer.Name = "MainContainer"
-    self.MainContainer.Size = HI.Config.WindowSize
-    self.MainContainer.Position = UDim2.new(0.5, -HI.Config.WindowSize.X.Offset/2, 0.5, -HI.Config.WindowSize.Y.Offset/2)
+    self.MainContainer.Size = self.Config.WindowSize
+    self.MainContainer.Position = UDim2.new(0.5, -self.Config.WindowSize.X.Offset/2, 0.5, -self.Config.WindowSize.Y.Offset/2)
     self.MainContainer.BackgroundTransparency = 1
     self.MainContainer.Parent = self.ScreenGui
     
     -- Main Window
-    self.MainWindow = CreateRoundedFrame(self.MainContainer, HI.Config.WindowSize, UDim2.new(0, 0, 0, 0))
-    self.MainWindow.BackgroundColor3 = HI.Themes[HI.Config.Theme].Main
+    self.MainWindow = CreateRoundedFrame(self.MainContainer, self.Config.WindowSize, UDim2.new(0, 0, 0, 0))
+    self.MainWindow.BackgroundColor3 = HI.Themes[self.Config.Theme].Main
     self.MainWindow.BorderSizePixel = 0
     
-    -- Make Window Draggable
-    self:Draggify(self.MainWindow)
+    -- Make Draggable
+    if self.Config.Draggable then
+        self:MakeDraggable(self.MainWindow)
+    end
     
     -- TOP BAR
     self.TopBar = Instance.new("Frame")
     self.TopBar.Name = "TopBar"
     self.TopBar.Size = UDim2.new(1, 0, 0, 60)
-    self.TopBar.BackgroundColor3 = HI.Themes[HI.Config.Theme].Secondary
+    self.TopBar.BackgroundColor3 = HI.Themes[self.Config.Theme].Secondary
     self.TopBar.BorderSizePixel = 0
     self.TopBar.Parent = self.MainWindow
     
-    -- Top Left: Hub Title with Icon
+    -- Title Container
     self.TitleContainer = Instance.new("Frame")
     self.TitleContainer.Name = "TitleContainer"
     self.TitleContainer.Size = UDim2.new(0, 250, 1, 0)
@@ -184,7 +217,7 @@ function HI.new(Title, IconId)
         Icon.Position = UDim2.new(0, 15, 0.5, -18)
         Icon.BackgroundTransparency = 1
         Icon.Image = IconId
-        Icon.ImageColor3 = HI.Themes[HI.Config.Theme].Accent
+        Icon.ImageColor3 = HI.Themes[self.Config.Theme].Accent
         Icon.Parent = self.TitleContainer
     end
     
@@ -193,15 +226,43 @@ function HI.new(Title, IconId)
     HubTitle.Size = UDim2.new(1, -60, 1, 0)
     HubTitle.Position = UDim2.new(0, IconId and 65 or 15, 0, 0)
     HubTitle.BackgroundTransparency = 1
-    HubTitle.Text = Title or "PREMIUM HUB"
-    HubTitle.TextColor3 = HI.Themes[HI.Config.Theme].Text
+    HubTitle.Text = Title or "HI LIBRARY"
+    HubTitle.TextColor3 = HI.Themes[self.Config.Theme].Text
     HubTitle.Font = Enum.Font.GothamBold
     HubTitle.TextSize = 20
     HubTitle.TextXAlignment = Enum.TextXAlignment.Left
     HubTitle.TextYAlignment = Enum.TextYAlignment.Center
     HubTitle.Parent = self.TitleContainer
     
-    -- Top Middle: Search Bar
+    -- Search Bar (if enabled)
+    if self.Config.SearchEnabled then
+        self:CreateSearchBar()
+    end
+    
+    -- Control Buttons
+    self:CreateControlButtons()
+    
+    -- Content Area
+    self:CreateContentArea()
+    
+    -- Watermark
+    self.Watermark = Instance.new("TextLabel")
+    self.Watermark.Name = "Watermark"
+    self.Watermark.Size = UDim2.new(1, 0, 0, 20)
+    self.Watermark.Position = UDim2.new(0, 0, 1, -25)
+    self.Watermark.BackgroundTransparency = 1
+    self.Watermark.Text = self.Config.Watermark
+    self.Watermark.TextColor3 = HI.Themes[self.Config.Theme].SubText
+    self.Watermark.Font = self.Config.Font
+    self.Watermark.TextSize = 10
+    self.Watermark.TextTransparency = 0.7
+    self.Watermark.Parent = self.MainWindow
+    
+    -- Setup Events
+    self:SetupEvents()
+end
+
+function HI:CreateSearchBar()
     self.SearchContainer = Instance.new("Frame")
     self.SearchContainer.Name = "SearchContainer"
     self.SearchContainer.Size = UDim2.new(0, 300, 0, 36)
@@ -210,7 +271,7 @@ function HI.new(Title, IconId)
     self.SearchContainer.Parent = self.TopBar
     
     local SearchFrame = CreateRoundedFrame(self.SearchContainer, UDim2.new(1, 0, 1, 0), UDim2.new(0, 0, 0, 0))
-    SearchFrame.BackgroundColor3 = HI.Themes[HI.Config.Theme].Tertiary
+    SearchFrame.BackgroundColor3 = HI.Themes[self.Config.Theme].Tertiary
     SearchFrame.BorderSizePixel = 0
     
     local SearchIcon = Instance.new("ImageLabel")
@@ -219,7 +280,7 @@ function HI.new(Title, IconId)
     SearchIcon.Position = UDim2.new(0, 10, 0.5, -10)
     SearchIcon.BackgroundTransparency = 1
     SearchIcon.Image = HI.Icons.Search
-    SearchIcon.ImageColor3 = HI.Themes[HI.Config.Theme].SubText
+    SearchIcon.ImageColor3 = HI.Themes[self.Config.Theme].SubText
     SearchIcon.Parent = SearchFrame
     
     self.SearchBox = Instance.new("TextBox")
@@ -228,16 +289,17 @@ function HI.new(Title, IconId)
     self.SearchBox.Position = UDim2.new(0, 40, 0, 0)
     self.SearchBox.BackgroundTransparency = 1
     self.SearchBox.Text = ""
-    self.SearchBox.PlaceholderText = "Search settings..."
-    self.SearchBox.PlaceholderColor3 = HI.Themes[HI.Config.Theme].SubText
-    self.SearchBox.TextColor3 = HI.Themes[HI.Config.Theme].Text
-    self.SearchBox.Font = HI.Config.Font
-    self.SearchBox.TextSize = HI.Config.TextSize
+    self.SearchBox.PlaceholderText = "Search..."
+    self.SearchBox.PlaceholderColor3 = HI.Themes[self.Config.Theme].SubText
+    self.SearchBox.TextColor3 = HI.Themes[self.Config.Theme].Text
+    self.SearchBox.Font = self.Config.Font
+    self.SearchBox.TextSize = self.Config.TextSize
     self.SearchBox.TextXAlignment = Enum.TextXAlignment.Left
     self.SearchBox.ClearTextOnFocus = false
     self.SearchBox.Parent = SearchFrame
-    
-    -- Top Right: Control Buttons
+end
+
+function HI:CreateControlButtons()
     self.ControlContainer = Instance.new("Frame")
     self.ControlContainer.Name = "ControlContainer"
     self.ControlContainer.Size = UDim2.new(0, 100, 1, 0)
@@ -252,7 +314,7 @@ function HI.new(Title, IconId)
     self.MinimizeButton.Position = UDim2.new(0, 10, 0.5, -15)
     self.MinimizeButton.BackgroundTransparency = 1
     self.MinimizeButton.Image = HI.Icons.Minimize
-    self.MinimizeButton.ImageColor3 = HI.Themes[HI.Config.Theme].SubText
+    self.MinimizeButton.ImageColor3 = HI.Themes[self.Config.Theme].SubText
     self.MinimizeButton.Parent = self.ControlContainer
     
     -- Close Button
@@ -262,10 +324,11 @@ function HI.new(Title, IconId)
     self.CloseButton.Position = UDim2.new(0, 50, 0.5, -15)
     self.CloseButton.BackgroundTransparency = 1
     self.CloseButton.Image = HI.Icons.Close
-    self.CloseButton.ImageColor3 = HI.Themes[HI.Config.Theme].SubText
+    self.CloseButton.ImageColor3 = HI.Themes[self.Config.Theme].SubText
     self.CloseButton.Parent = self.ControlContainer
-    
-    -- MAIN CONTENT AREA
+end
+
+function HI:CreateContentArea()
     self.ContentArea = Instance.new("Frame")
     self.ContentArea.Name = "ContentArea"
     self.ContentArea.Size = UDim2.new(1, 0, 1, -60)
@@ -273,12 +336,11 @@ function HI.new(Title, IconId)
     self.ContentArea.BackgroundTransparency = 1
     self.ContentArea.Parent = self.MainWindow
     
-    -- LEFT SIDE: Tab Navigation
+    -- Tab Navigation (Left Side)
     self.TabNavigation = CreateRoundedFrame(self.ContentArea, UDim2.new(0, 220, 1, -20), UDim2.new(0, 10, 0, 10))
-    self.TabNavigation.BackgroundColor3 = HI.Themes[HI.Config.Theme].Secondary
+    self.TabNavigation.BackgroundColor3 = HI.Themes[self.Config.Theme].Secondary
     self.TabNavigation.BorderSizePixel = 0
     
-    -- Tab List
     self.TabList = Instance.new("ScrollingFrame")
     self.TabList.Name = "TabList"
     self.TabList.Size = UDim2.new(1, -20, 1, -20)
@@ -286,7 +348,7 @@ function HI.new(Title, IconId)
     self.TabList.BackgroundTransparency = 1
     self.TabList.BorderSizePixel = 0
     self.TabList.ScrollBarThickness = 4
-    self.TabList.ScrollBarImageColor3 = HI.Themes[HI.Config.Theme].Border
+    self.TabList.ScrollBarImageColor3 = HI.Themes[self.Config.Theme].Border
     self.TabList.AutomaticCanvasSize = Enum.AutomaticSize.Y
     self.TabList.Parent = self.TabNavigation
     
@@ -294,12 +356,11 @@ function HI.new(Title, IconId)
     TabListLayout.Padding = UDim.new(0, 8)
     TabListLayout.Parent = self.TabList
     
-    -- RIGHT SIDE: Content Display
+    -- Content Display (Right Side)
     self.ContentDisplay = CreateRoundedFrame(self.ContentArea, UDim2.new(1, -250, 1, -20), UDim2.new(0, 240, 0, 10))
-    self.ContentDisplay.BackgroundColor3 = HI.Themes[HI.Config.Theme].Secondary
+    self.ContentDisplay.BackgroundColor3 = HI.Themes[self.Config.Theme].Secondary
     self.ContentDisplay.BorderSizePixel = 0
     
-    -- Content Scroller
     self.ContentScroller = Instance.new("ScrollingFrame")
     self.ContentScroller.Name = "ContentScroller"
     self.ContentScroller.Size = UDim2.new(1, -20, 1, -20)
@@ -307,7 +368,7 @@ function HI.new(Title, IconId)
     self.ContentScroller.BackgroundTransparency = 1
     self.ContentScroller.BorderSizePixel = 0
     self.ContentScroller.ScrollBarThickness = 4
-    self.ContentScroller.ScrollBarImageColor3 = HI.Themes[HI.Config.Theme].Border
+    self.ContentScroller.ScrollBarImageColor3 = HI.Themes[self.Config.Theme].Border
     self.ContentScroller.AutomaticCanvasSize = Enum.AutomaticSize.Y
     self.ContentScroller.CanvasSize = UDim2.new(0, 0, 0, 0)
     self.ContentScroller.Parent = self.ContentDisplay
@@ -315,49 +376,45 @@ function HI.new(Title, IconId)
     local ContentLayout = Instance.new("UIListLayout")
     ContentLayout.Padding = UDim.new(0, 20)
     ContentLayout.Parent = self.ContentScroller
-    
-    -- State Management
-    self.Tabs = {}
-    self.CurrentTab = nil
-    self.IsMinimized = false
-    self.OriginalSize = HI.Config.WindowSize
-    self.MinimizedSize = UDim2.new(0, 300, 0, 60)
-    
-    -- Button Events
+end
+
+function HI:SetupEvents()
+    -- Minimize Button
     self.MinimizeButton.MouseButton1Click:Connect(function()
         self:ToggleMinimize()
     end)
     
+    -- Close Button
     self.CloseButton.MouseButton1Click:Connect(function()
         self:Toggle()
     end)
     
+    -- Hover Effects
     self.MinimizeButton.MouseEnter:Connect(function()
-        Tween(self.MinimizeButton, {ImageColor3 = HI.Themes[HI.Config.Theme].Warning})
+        Tween(self.MinimizeButton, {ImageColor3 = HI.Themes[self.Config.Theme].Warning})
     end)
     
     self.MinimizeButton.MouseLeave:Connect(function()
-        Tween(self.MinimizeButton, {ImageColor3 = HI.Themes[HI.Config.Theme].SubText})
+        Tween(self.MinimizeButton, {ImageColor3 = HI.Themes[self.Config.Theme].SubText})
     end)
     
     self.CloseButton.MouseEnter:Connect(function()
-        Tween(self.CloseButton, {ImageColor3 = HI.Themes[HI.Config.Theme].Danger})
+        Tween(self.CloseButton, {ImageColor3 = HI.Themes[self.Config.Theme].Danger})
     end)
     
     self.CloseButton.MouseLeave:Connect(function()
-        Tween(self.CloseButton, {ImageColor3 = HI.Themes[HI.Config.Theme].SubText})
+        Tween(self.CloseButton, {ImageColor3 = HI.Themes[self.Config.Theme].SubText})
     end)
     
-    -- Search functionality
-    self.SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
-        self:SearchSettings(self.SearchBox.Text)
-    end)
-    
-    return self
+    -- Search Functionality
+    if self.Config.SearchEnabled and self.SearchBox then
+        self.SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+            self:SearchContent(self.SearchBox.Text)
+        end)
+    end
 end
 
--- Make Window Draggable
-function HI:Draggify(Frame)
+function HI:MakeDraggable(Frame)
     local Dragging, DragInput, DragStart, StartPos
     
     local function Update(Input)
@@ -392,49 +449,83 @@ function HI:Draggify(Frame)
     end)
 end
 
--- Toggle Minimize/Maximize
-function HI:ToggleMinimize()
-    self.IsMinimized = not self.IsMinimized
-    
-    if self.IsMinimized then
-        -- Hide content, show only top bar
-        Tween(self.MainWindow, {Size = self.MinimizedSize})
-        self.ContentArea.Visible = false
-        self.MinimizeButton.Image = "rbxassetid://10734928599" -- Restore icon
-    else
-        -- Show full window
-        Tween(self.MainWindow, {Size = self.OriginalSize})
-        self.ContentArea.Visible = true
-        self.MinimizeButton.Image = HI.Icons.Minimize
-    end
-end
+-- PUBLIC API METHODS
 
--- Toggle UI Visibility
+-- Window Management
 function HI:Toggle()
     self.ScreenGui.Enabled = not self.ScreenGui.Enabled
     if self.BackgroundBlur then
         self.BackgroundBlur.Enabled = self.ScreenGui.Enabled
     end
+    return self
 end
 
--- Update Theme
-function HI:UpdateTheme()
-    local Theme = HI.Themes[HI.Config.Theme]
+function HI:ToggleMinimize()
+    self.IsMinimized = not self.IsMinimized
     
-    -- Update main window
+    if self.IsMinimized then
+        Tween(self.MainWindow, {Size = self.MinimizedSize})
+        self.ContentArea.Visible = false
+    else
+        Tween(self.MainWindow, {Size = self.OriginalSize})
+        self.ContentArea.Visible = true
+    end
+    return self
+end
+
+function HI:Show()
+    self.ScreenGui.Parent = game:GetService("CoreGui") or game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    if self.BackgroundBlur then
+        self.BackgroundBlur.Enabled = true
+    end
+    return self
+end
+
+function HI:Hide()
+    self.ScreenGui.Enabled = false
+    if self.BackgroundBlur then
+        self.BackgroundBlur.Enabled = false
+    end
+    return self
+end
+
+function HI:Destroy()
+    if self.ScreenGui then
+        self.ScreenGui:Destroy()
+    end
+    if self.BackgroundBlur then
+        self.BackgroundBlur:Destroy()
+    end
+    return nil
+end
+
+-- Theme Management
+function HI:SetTheme(ThemeName)
+    if HI.Themes[ThemeName] then
+        self.Config.Theme = ThemeName
+        self:UpdateTheme()
+    end
+    return self
+end
+
+function HI:UpdateTheme()
+    local Theme = HI.Themes[self.Config.Theme]
+    
     Tween(self.MainWindow, {BackgroundColor3 = Theme.Main})
     Tween(self.TopBar, {BackgroundColor3 = Theme.Secondary})
     Tween(self.TabNavigation, {BackgroundColor3 = Theme.Secondary})
     Tween(self.ContentDisplay, {BackgroundColor3 = Theme.Secondary})
     
-    -- Update text colors
-    local function UpdateTextColor(Parent)
+    -- Update text and icons
+    local function UpdateColors(Parent)
         for _, Child in pairs(Parent:GetDescendants()) do
             if Child:IsA("TextLabel") or Child:IsA("TextBox") then
                 if Child.Name == "HubTitle" then
                     Tween(Child, {TextColor3 = Theme.Text})
                 elseif Child.Name == "SearchBox" then
                     Tween(Child, {TextColor3 = Theme.Text, PlaceholderColor3 = Theme.SubText})
+                elseif Child.Name == "Watermark" then
+                    Tween(Child, {TextColor3 = Theme.SubText})
                 else
                     Tween(Child, {TextColor3 = Theme.Text})
                 end
@@ -452,77 +543,63 @@ function HI:UpdateTheme()
         end
     end
     
-    UpdateTextColor(self.MainWindow)
+    UpdateColors(self.MainWindow)
+    return self
 end
 
--- Search Settings
-function HI:SearchSettings(Query)
-    Query = string.lower(Query)
-    
-    for TabName, Tab in pairs(self.Tabs) do
-        local TabVisible = false
-        
-        -- Check if tab name matches
-        if string.find(string.lower(TabName), Query, 1, true) then
-            TabVisible = true
-        else
-            -- Check sections in tab
-            for SectionName, Section in pairs(Tab.Sections or {}) do
-                if string.find(string.lower(SectionName), Query, 1, true) then
-                    TabVisible = true
-                    break
-                end
-            end
-        end
-        
-        Tab.Button.Visible = TabVisible or Query == ""
+function HI:GetAvailableThemes()
+    local themes = {}
+    for name, _ in pairs(HI.Themes) do
+        table.insert(themes, name)
     end
+    return themes
 end
 
--- Create Tab (with optional icon)
-function HI:NewTab(TabName, IconId)
+-- Tab Management
+function HI:CreateTab(TabName, IconId)
     local Tab = {}
     Tab.Name = TabName
     Tab.Sections = {}
+    Tab.Elements = {}
     
     -- Tab Button
     Tab.Button = Instance.new("TextButton")
     Tab.Button.Name = TabName .. "Tab"
     Tab.Button.Size = UDim2.new(1, 0, 0, 50)
-    Tab.Button.BackgroundColor3 = HI.Themes[HI.Config.Theme].Tertiary
+    Tab.Button.BackgroundColor3 = HI.Themes[self.Config.Theme].Tertiary
     Tab.Button.BorderSizePixel = 0
     Tab.Button.Text = ""
     Tab.Button.AutoButtonColor = false
     Tab.Button.Parent = self.TabList
     
-    if HI.Config.RoundedCorners then
+    if self.Config.RoundedCorners then
         local UICorner = Instance.new("UICorner")
         UICorner.CornerRadius = UDim.new(0, 6)
         UICorner.Parent = Tab.Button
     end
     
     -- Tab Icon
-    if HI.Config.UseIcons and IconId then
+    if self.Config.UseIcons and IconId then
         Tab.Icon = Instance.new("ImageLabel")
         Tab.Icon.Name = "TabIcon"
         Tab.Icon.Size = UDim2.new(0, 24, 0, 24)
         Tab.Icon.Position = UDim2.new(0, 15, 0.5, -12)
         Tab.Icon.BackgroundTransparency = 1
         Tab.Icon.Image = IconId
-        Tab.Icon.ImageColor3 = HI.Themes[HI.Config.Theme].SubText
+        Tab.Icon.ImageColor3 = HI.Themes[self.Config.Theme].SubText
         Tab.Icon.Parent = Tab.Button
     end
     
     -- Tab Label
     Tab.Label = Instance.new("TextLabel")
     Tab.Label.Name = "TabLabel"
-    Tab.Label.Size = UDim2.new(1, HI.Config.UseIcons and IconId and -55 or -30, 1, 0)
-    Tab.Label.Position = UDim2.new(0, HI.Config.UseIcons and IconId and 55 : 15, 0, 0)
+    Tab.Label.Size = UDim2.new(1, self.Config.UseIcons and IconId and -55 or -30, 1, 0)
+    Tab.Label.Position = UDim2.new(0, self.Config.UseIcons and IconId and 55 or 15, 0, 0)
     Tab.Label.BackgroundTransparency = 1
     Tab.Label.Text = TabName
-    Tab.Label.TextColor3 = HI.Themes[HI.Config.Theme].Text
-    Tab.Label.Font = HI.Config.Font
-    Tab.Label.TextSize = HI.Config.TextSize
+    Tab.Label.TextColor3 = HI.Themes[self.Config.Theme].Text
+    Tab.Label.Font = self.Config.Font
+    Tab.Label.TextSize = self.Config.TextSize
     Tab.Label.TextXAlignment = Enum.TextXAlignment.Left
     Tab.Label.TextYAlignment = Enum.TextYAlignment.Center
     Tab.Label.Parent = Tab.Button
@@ -539,25 +616,25 @@ function HI:NewTab(TabName, IconId)
     ContentLayout.Padding = UDim.new(0, 20)
     ContentLayout.Parent = Tab.Content
     
-    -- Tab Button Events
+    -- Events
     Tab.Button.MouseButton1Click:Connect(function()
         self:SwitchTab(Tab)
     end)
     
     Tab.Button.MouseEnter:Connect(function()
         if Tab ~= self.CurrentTab then
-            Tween(Tab.Button, {BackgroundColor3 = HI.Themes[HI.Config.Theme].Border})
+            Tween(Tab.Button, {BackgroundColor3 = HI.Themes[self.Config.Theme].Border})
             if Tab.Icon then
-                Tween(Tab.Icon, {ImageColor3 = HI.Themes[HI.Config.Theme].Text})
+                Tween(Tab.Icon, {ImageColor3 = HI.Themes[self.Config.Theme].Text})
             end
         end
     end)
     
     Tab.Button.MouseLeave:Connect(function()
         if Tab ~= self.CurrentTab then
-            Tween(Tab.Button, {BackgroundColor3 = HI.Themes[HI.Config.Theme].Tertiary})
+            Tween(Tab.Button, {BackgroundColor3 = HI.Themes[self.Config.Theme].Tertiary})
             if Tab.Icon then
-                Tween(Tab.Icon, {ImageColor3 = HI.Themes[HI.Config.Theme].SubText})
+                Tween(Tab.Icon, {ImageColor3 = HI.Themes[self.Config.Theme].SubText})
             end
         end
     end)
@@ -572,31 +649,52 @@ function HI:NewTab(TabName, IconId)
     return Tab
 end
 
--- Switch Tab
 function HI:SwitchTab(Tab)
-    -- Deactivate all tabs
     for Name, T in pairs(self.Tabs) do
         T.Content.Visible = false
-        Tween(T.Button, {BackgroundColor3 = HI.Themes[HI.Config.Theme].Tertiary})
+        Tween(T.Button, {BackgroundColor3 = HI.Themes[self.Config.Theme].Tertiary})
         if T.Icon then
-            Tween(T.Icon, {ImageColor3 = HI.Themes[HI.Config.Theme].SubText})
+            Tween(T.Icon, {ImageColor3 = HI.Themes[self.Config.Theme].SubText})
         end
-        Tween(T.Label, {TextColor3 = HI.Themes[HI.Config.Theme].Text})
+        Tween(T.Label, {TextColor3 = HI.Themes[self.Config.Theme].Text})
     end
     
-    -- Activate selected tab
     Tab.Content.Visible = true
-    Tween(Tab.Button, {BackgroundColor3 = HI.Themes[HI.Config.Theme].Accent})
+    Tween(Tab.Button, {BackgroundColor3 = HI.Themes[self.Config.Theme].Accent})
     if Tab.Icon then
-        Tween(Tab.Icon, {ImageColor3 = HI.Themes[HI.Config.Theme].Text})
+        Tween(Tab.Icon, {ImageColor3 = HI.Themes[self.Config.Theme].Text})
     end
-    Tween(Tab.Label, {TextColor3 = HI.Themes[HI.Config.Theme].Text})
+    Tween(Tab.Label, {TextColor3 = HI.Themes[self.Config.Theme].Text})
     
     self.CurrentTab = Tab
+    return self
 end
 
--- Create Section
-function HI:NewSection(Tab, SectionName)
+function HI:GetTab(TabName)
+    return self.Tabs[TabName]
+end
+
+function HI:RemoveTab(TabName)
+    local Tab = self.Tabs[TabName]
+    if Tab then
+        if Tab.Button then Tab.Button:Destroy() end
+        if Tab.Content then Tab.Content:Destroy() end
+        self.Tabs[TabName] = nil
+        
+        if self.CurrentTab == Tab then
+            self.CurrentTab = nil
+            -- Switch to another tab if available
+            for name, tab in pairs(self.Tabs) do
+                self:SwitchTab(tab)
+                break
+            end
+        end
+    end
+    return self
+end
+
+-- Section Management
+function HI:CreateSection(Tab, SectionName)
     local Section = {}
     
     Section.Frame = Instance.new("Frame")
@@ -605,19 +703,17 @@ function HI:NewSection(Tab, SectionName)
     Section.Frame.BackgroundTransparency = 1
     Section.Frame.Parent = Tab.Content
     
-    -- Section Title
     Section.Title = Instance.new("TextLabel")
     Section.Title.Name = "Title"
     Section.Title.Size = UDim2.new(1, 0, 0, 30)
     Section.Title.BackgroundTransparency = 1
     Section.Title.Text = SectionName
-    Section.Title.TextColor3 = HI.Themes[HI.Config.Theme].Text
+    Section.Title.TextColor3 = HI.Themes[self.Config.Theme].Text
     Section.Title.Font = Enum.Font.GothamSemibold
-    Section.Title.TextSize = HI.Config.TitleSize
+    Section.Title.TextSize = self.Config.TitleSize
     Section.Title.TextXAlignment = Enum.TextXAlignment.Left
     Section.Title.Parent = Section.Frame
     
-    -- Section Content
     Section.Content = Instance.new("Frame")
     Section.Content.Name = "Content"
     Section.Content.Size = UDim2.new(1, 0, 0, 0)
@@ -629,7 +725,7 @@ function HI:NewSection(Tab, SectionName)
     ContentLayout.Padding = UDim.new(0, 12)
     ContentLayout.Parent = Section.Content
     
-    -- Auto-size section
+    -- Auto-size
     ContentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         Section.Content.Size = UDim2.new(1, 0, 0, ContentLayout.AbsoluteContentSize.Y)
         Section.Frame.Size = UDim2.new(1, 0, 0, 35 + ContentLayout.AbsoluteContentSize.Y)
@@ -639,8 +735,114 @@ function HI:NewSection(Tab, SectionName)
     return Section
 end
 
--- Enhanced Slider with 4K styling
-function HI:NewSlider(Section, Name, Min, Max, Default, Decimals, Callback)
+-- UI Components
+function HI:AddLabel(Section, Text, Color)
+    local Label = Instance.new("TextLabel")
+    Label.Name = "Label"
+    Label.Size = UDim2.new(1, 0, 0, 25)
+    Label.BackgroundTransparency = 1
+    Label.Text = Text
+    Label.TextColor3 = Color or HI.Themes[self.Config.Theme].SubText
+    Label.Font = self.Config.Font
+    Label.TextSize = self.Config.TextSize - 1
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Section.Content
+    
+    return Label
+end
+
+function HI:AddButton(Section, Name, Callback, Color)
+    local Button = CreateRoundedFrame(Section.Content, UDim2.new(1, 0, 0, 40), UDim2.new(0, 0, 0, 0))
+    Button.BackgroundColor3 = Color or HI.Themes[self.Config.Theme].Accent
+    Button.BorderSizePixel = 0
+    
+    local ButtonLabel = Instance.new("TextLabel")
+    ButtonLabel.Name = "Label"
+    ButtonLabel.Size = UDim2.new(1, 0, 1, 0)
+    ButtonLabel.BackgroundTransparency = 1
+    ButtonLabel.Text = Name
+    ButtonLabel.TextColor3 = HI.Themes[self.Config.Theme].Text
+    ButtonLabel.Font = Enum.Font.GothamSemibold
+    ButtonLabel.TextSize = self.Config.TextSize
+    ButtonLabel.TextYAlignment = Enum.TextYAlignment.Center
+    ButtonLabel.Parent = Button
+    
+    Button.InputBegan:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if Callback then
+                Callback()
+            end
+        end
+    end)
+    
+    Button.MouseEnter:Connect(function()
+        Tween(Button, {BackgroundColor3 = (Color or HI.Themes[self.Config.Theme].Accent):Lerp(Color3.new(1, 1, 1), 0.15)})
+    end)
+    
+    Button.MouseLeave:Connect(function()
+        Tween(Button, {BackgroundColor3 = Color or HI.Themes[self.Config.Theme].Accent})
+    end)
+    
+    return Button
+end
+
+function HI:AddToggle(Section, Name, Default, Callback)
+    local Toggle = {}
+    Toggle.Value = Default or false
+    
+    local Container = Instance.new("Frame")
+    Container.Name = Name .. "Toggle"
+    Container.Size = UDim2.new(1, 0, 0, 40)
+    Container.BackgroundTransparency = 1
+    Container.Parent = Section.Content
+    
+    local Label = Instance.new("TextLabel")
+    Label.Name = "Label"
+    Label.Size = UDim2.new(1, -60, 1, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = Name
+    Label.TextColor3 = HI.Themes[self.Config.Theme].Text
+    Label.Font = self.Config.Font
+    Label.TextSize = self.Config.TextSize
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Container
+    
+    local ToggleContainer = CreateRoundedFrame(Container, UDim2.new(0, 50, 0, 25), UDim2.new(1, -55, 0.5, -12.5))
+    ToggleContainer.BackgroundColor3 = HI.Themes[self.Config.Theme].Tertiary
+    ToggleContainer.BorderSizePixel = 0
+    
+    local ToggleCircle = CreateRoundedFrame(ToggleContainer, UDim2.new(0, 20, 0, 20), Toggle.Value and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10))
+    ToggleCircle.BackgroundColor3 = HI.Themes[self.Config.Theme].Text
+    ToggleCircle.BorderSizePixel = 0
+    ToggleCircle.ZIndex = 2
+    
+    local function UpdateToggle()
+        if Toggle.Value then
+            Tween(ToggleContainer, {BackgroundColor3 = HI.Themes[self.Config.Theme].Success})
+            Tween(ToggleCircle, {Position = UDim2.new(1, -22, 0.5, -10)})
+        else
+            Tween(ToggleContainer, {BackgroundColor3 = HI.Themes[self.Config.Theme].Tertiary})
+            Tween(ToggleCircle, {Position = UDim2.new(0, 2, 0.5, -10)})
+        end
+    end
+    
+    UpdateToggle()
+    
+    Container.InputBegan:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+            Toggle.Value = not Toggle.Value
+            UpdateToggle()
+            
+            if Callback then
+                Callback(Toggle.Value)
+            end
+        end
+    end)
+    
+    return Toggle
+end
+
+function HI:AddSlider(Section, Name, Min, Max, Default, Decimals, Callback)
     local Slider = {}
     Slider.Value = Default or Min
     Decimals = Decimals or 1
@@ -651,44 +853,39 @@ function HI:NewSlider(Section, Name, Min, Max, Default, Decimals, Callback)
     Container.BackgroundTransparency = 1
     Container.Parent = Section.Content
     
-    -- Label
     local Label = Instance.new("TextLabel")
     Label.Name = "Label"
     Label.Size = UDim2.new(1, 0, 0, 25)
     Label.BackgroundTransparency = 1
     Label.Text = Name
-    Label.TextColor3 = HI.Themes[HI.Config.Theme].Text
-    Label.Font = HI.Config.Font
-    Label.TextSize = HI.Config.TextSize
+    Label.TextColor3 = HI.Themes[self.Config.Theme].Text
+    Label.Font = self.Config.Font
+    Label.TextSize = self.Config.TextSize
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Container
     
-    -- Value Display (like "10.6/20")
     local ValueLabel = Instance.new("TextLabel")
     ValueLabel.Name = "ValueLabel"
     ValueLabel.Size = UDim2.new(0, 100, 0, 25)
     ValueLabel.Position = UDim2.new(1, -100, 0, 0)
     ValueLabel.BackgroundTransparency = 1
-    ValueLabel.Text = Round(Slider.Value, Decimals) .. "/" .. Max
-    ValueLabel.TextColor3 = HI.Themes[HI.Config.Theme].SubText
+    ValueLabel.Text = Round(Slider.Value, Decimals)
+    ValueLabel.TextColor3 = HI.Themes[self.Config.Theme].SubText
     ValueLabel.Font = Enum.Font.GothamMono
-    ValueLabel.TextSize = HI.Config.TextSize
+    ValueLabel.TextSize = self.Config.TextSize
     ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
     ValueLabel.Parent = Container
     
-    -- Slider Container
     local SliderContainer = CreateRoundedFrame(Container, UDim2.new(1, 0, 0, 8), UDim2.new(0, 0, 0, 35))
-    SliderContainer.BackgroundColor3 = HI.Themes[HI.Config.Theme].Tertiary
+    SliderContainer.BackgroundColor3 = HI.Themes[self.Config.Theme].Tertiary
     SliderContainer.BorderSizePixel = 0
     
-    -- Slider Fill
     local SliderFill = CreateRoundedFrame(SliderContainer, UDim2.new((Slider.Value - Min) / (Max - Min), 0, 1, 0), UDim2.new(0, 0, 0, 0))
-    SliderFill.BackgroundColor3 = HI.Themes[HI.Config.Theme].Accent
+    SliderFill.BackgroundColor3 = HI.Themes[self.Config.Theme].Accent
     SliderFill.BorderSizePixel = 0
     
-    -- Slider Button
     local SliderButton = CreateRoundedFrame(SliderContainer, UDim2.new(0, 20, 0, 20), UDim2.new((Slider.Value - Min) / (Max - Min), -10, 0.5, -10))
-    SliderButton.BackgroundColor3 = HI.Themes[HI.Config.Theme].Text
+    SliderButton.BackgroundColor3 = HI.Themes[self.Config.Theme].Text
     SliderButton.BorderSizePixel = 0
     SliderButton.ZIndex = 2
     
@@ -697,7 +894,7 @@ function HI:NewSlider(Section, Name, Min, Max, Default, Decimals, Callback)
         Slider.Value = Value
         local Ratio = (Value - Min) / (Max - Min)
         
-        ValueLabel.Text = Round(Value, Decimals) .. "/" .. Max
+        ValueLabel.Text = Round(Value, Decimals)
         Tween(SliderFill, {Size = UDim2.new(Ratio, 0, 1, 0)})
         Tween(SliderButton, {Position = UDim2.new(Ratio, -10, 0.5, -10)})
         
@@ -750,67 +947,7 @@ function HI:NewSlider(Section, Name, Min, Max, Default, Decimals, Callback)
     return Slider
 end
 
--- Premium Toggle Switch
-function HI:NewToggle(Section, Name, Default, Callback)
-    local Toggle = {}
-    Toggle.Value = Default or false
-    
-    local Container = Instance.new("Frame")
-    Container.Name = Name .. "Toggle"
-    Container.Size = UDim2.new(1, 0, 0, 40)
-    Container.BackgroundTransparency = 1
-    Container.Parent = Section.Content
-    
-    local Label = Instance.new("TextLabel")
-    Label.Name = "Label"
-    Label.Size = UDim2.new(1, -60, 1, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = Name
-    Label.TextColor3 = HI.Themes[HI.Config.Theme].Text
-    Label.Font = HI.Config.Font
-    Label.TextSize = HI.Config.TextSize
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Container
-    
-    -- Toggle Container
-    local ToggleContainer = CreateRoundedFrame(Container, UDim2.new(0, 50, 0, 25), UDim2.new(1, -55, 0.5, -12.5))
-    ToggleContainer.BackgroundColor3 = HI.Themes[HI.Config.Theme].Tertiary
-    ToggleContainer.BorderSizePixel = 0
-    
-    -- Toggle Circle
-    local ToggleCircle = CreateRoundedFrame(ToggleContainer, UDim2.new(0, 20, 0, 20), Toggle.Value and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10))
-    ToggleCircle.BackgroundColor3 = HI.Themes[HI.Config.Theme].Text
-    ToggleCircle.BorderSizePixel = 0
-    ToggleCircle.ZIndex = 2
-    
-    local function UpdateToggle()
-        if Toggle.Value then
-            Tween(ToggleContainer, {BackgroundColor3 = HI.Themes[HI.Config.Theme].Success})
-            Tween(ToggleCircle, {Position = UDim2.new(1, -22, 0.5, -10)})
-        else
-            Tween(ToggleContainer, {BackgroundColor3 = HI.Themes[HI.Config.Theme].Tertiary})
-            Tween(ToggleCircle, {Position = UDim2.new(0, 2, 0.5, -10)})
-        end
-    end
-    
-    UpdateToggle()
-    
-    Container.InputBegan:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-            Toggle.Value = not Toggle.Value
-            UpdateToggle()
-            
-            if Callback then
-                Callback(Toggle.Value)
-            end
-        end
-    end)
-    
-    return Toggle
-end
-
--- Premium Dropdown
-function HI:NewDropdown(Section, Name, Options, Default, Callback)
+function HI:AddDropdown(Section, Name, Options, Default, Callback)
     local Dropdown = {}
     Dropdown.Value = Default or Options[1]
     Dropdown.Open = false
@@ -827,15 +964,14 @@ function HI:NewDropdown(Section, Name, Options, Default, Callback)
     Label.Size = UDim2.new(0.5, 0, 1, 0)
     Label.BackgroundTransparency = 1
     Label.Text = Name
-    Label.TextColor3 = HI.Themes[HI.Config.Theme].Text
-    Label.Font = HI.Config.Font
-    Label.TextSize = HI.Config.TextSize
+    Label.TextColor3 = HI.Themes[self.Config.Theme].Text
+    Label.Font = self.Config.Font
+    Label.TextSize = self.Config.TextSize
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Container
     
-    -- Dropdown Button
     local DropdownButton = CreateRoundedFrame(Container, UDim2.new(0.45, 0, 1, 0), UDim2.new(0.5, 0, 0, 0))
-    DropdownButton.BackgroundColor3 = HI.Themes[HI.Config.Theme].Tertiary
+    DropdownButton.BackgroundColor3 = HI.Themes[self.Config.Theme].Tertiary
     DropdownButton.BorderSizePixel = 0
     
     local ButtonLabel = Instance.new("TextLabel")
@@ -844,25 +980,14 @@ function HI:NewDropdown(Section, Name, Options, Default, Callback)
     ButtonLabel.Position = UDim2.new(0, 10, 0, 0)
     ButtonLabel.BackgroundTransparency = 1
     ButtonLabel.Text = Dropdown.Value
-    ButtonLabel.TextColor3 = HI.Themes[HI.Config.Theme].SubText
-    ButtonLabel.Font = HI.Config.Font
-    ButtonLabel.TextSize = HI.Config.TextSize
+    ButtonLabel.TextColor3 = HI.Themes[self.Config.Theme].SubText
+    ButtonLabel.Font = self.Config.Font
+    ButtonLabel.TextSize = self.Config.TextSize
     ButtonLabel.TextXAlignment = Enum.TextXAlignment.Left
     ButtonLabel.Parent = DropdownButton
     
-    local DropdownArrow = Instance.new("ImageLabel")
-    DropdownArrow.Name = "Arrow"
-    DropdownArrow.Size = UDim2.new(0, 15, 0, 15)
-    DropdownArrow.Position = UDim2.new(1, -20, 0.5, -7.5)
-    DropdownArrow.BackgroundTransparency = 1
-    DropdownArrow.Image = "rbxassetid://10723359580" -- Down arrow icon
-    DropdownArrow.ImageColor3 = HI.Themes[HI.Config.Theme].SubText
-    DropdownArrow.Rotation = 0
-    DropdownArrow.Parent = DropdownButton
-    
-    -- Options Frame
     local OptionsFrame = CreateRoundedFrame(Container, UDim2.new(0.45, 0, 0, 0), UDim2.new(0.5, 0, 1, 5))
-    OptionsFrame.BackgroundColor3 = HI.Themes[HI.Config.Theme].Tertiary
+    OptionsFrame.BackgroundColor3 = HI.Themes[self.Config.Theme].Tertiary
     OptionsFrame.BorderSizePixel = 0
     OptionsFrame.Visible = false
     OptionsFrame.ZIndex = 10
@@ -871,10 +996,9 @@ function HI:NewDropdown(Section, Name, Options, Default, Callback)
     OptionsLayout.Padding = UDim.new(0, 2)
     OptionsLayout.Parent = OptionsFrame
     
-    -- Create Options
     for _, Option in ipairs(Options) do
         local OptionButton = CreateRoundedFrame(OptionsFrame, UDim2.new(1, 0, 0, 30), UDim2.new(0, 0, 0, 0))
-        OptionButton.BackgroundColor3 = HI.Themes[HI.Config.Theme].Tertiary
+        OptionButton.BackgroundColor3 = HI.Themes[self.Config.Theme].Tertiary
         OptionButton.BorderSizePixel = 0
         OptionButton.ZIndex = 11
         
@@ -884,9 +1008,9 @@ function HI:NewDropdown(Section, Name, Options, Default, Callback)
         OptionLabel.Position = UDim2.new(0, 10, 0, 0)
         OptionLabel.BackgroundTransparency = 1
         OptionLabel.Text = Option
-        OptionLabel.TextColor3 = HI.Themes[HI.Config.Theme].SubText
-        OptionLabel.Font = HI.Config.Font
-        OptionLabel.TextSize = HI.Config.TextSize - 1
+        OptionLabel.TextColor3 = HI.Themes[self.Config.Theme].SubText
+        OptionLabel.Font = self.Config.Font
+        OptionLabel.TextSize = self.Config.TextSize - 1
         OptionLabel.TextXAlignment = Enum.TextXAlignment.Left
         OptionLabel.ZIndex = 12
         OptionLabel.Parent = OptionButton
@@ -897,7 +1021,6 @@ function HI:NewDropdown(Section, Name, Options, Default, Callback)
                 ButtonLabel.Text = Option
                 Container.Size = UDim2.new(1, 0, 0, 40)
                 Tween(OptionsFrame, {Size = UDim2.new(0.45, 0, 0, 0)})
-                Tween(DropdownArrow, {Rotation = 0})
                 Dropdown.Open = false
                 
                 if Callback then
@@ -907,17 +1030,16 @@ function HI:NewDropdown(Section, Name, Options, Default, Callback)
         end)
         
         OptionButton.MouseEnter:Connect(function()
-            Tween(OptionButton, {BackgroundColor3 = HI.Themes[HI.Config.Theme].Border})
-            Tween(OptionLabel, {TextColor3 = HI.Themes[HI.Config.Theme].Text})
+            Tween(OptionButton, {BackgroundColor3 = HI.Themes[self.Config.Theme].Border})
+            Tween(OptionLabel, {TextColor3 = HI.Themes[self.Config.Theme].Text})
         end)
         
         OptionButton.MouseLeave:Connect(function()
-            Tween(OptionButton, {BackgroundColor3 = HI.Themes[HI.Config.Theme].Tertiary})
-            Tween(OptionLabel, {TextColor3 = HI.Themes[HI.Config.Theme].SubText})
+            Tween(OptionButton, {BackgroundColor3 = HI.Themes[self.Config.Theme].Tertiary})
+            Tween(OptionLabel, {TextColor3 = HI.Themes[self.Config.Theme].SubText})
         end)
     end
     
-    -- Toggle Dropdown
     DropdownButton.InputBegan:Connect(function(Input)
         if Input.UserInputType == Enum.UserInputType.MouseButton1 then
             Dropdown.Open = not Dropdown.Open
@@ -926,11 +1048,9 @@ function HI:NewDropdown(Section, Name, Options, Default, Callback)
                 Container.Size = UDim2.new(1, 0, 0, 45 + #Options * 32)
                 OptionsFrame.Visible = true
                 OptionsFrame.Size = UDim2.new(0.45, 0, 0, #Options * 32)
-                Tween(DropdownArrow, {Rotation = 180})
             else
                 Container.Size = UDim2.new(1, 0, 0, 40)
                 Tween(OptionsFrame, {Size = UDim2.new(0.45, 0, 0, 0)})
-                Tween(DropdownArrow, {Rotation = 0})
             end
         end
     end)
@@ -938,245 +1058,139 @@ function HI:NewDropdown(Section, Name, Options, Default, Callback)
     return Dropdown
 end
 
--- Premium Button
-function HI:NewButton(Section, Name, Callback)
-    local Button = CreateRoundedFrame(Section.Content, UDim2.new(1, 0, 0, 40), UDim2.new(0, 0, 0, 0))
-    Button.BackgroundColor3 = HI.Themes[HI.Config.Theme].Accent
-    Button.BorderSizePixel = 0
-    
-    local ButtonLabel = Instance.new("TextLabel")
-    ButtonLabel.Name = "Label"
-    ButtonLabel.Size = UDim2.new(1, 0, 1, 0)
-    ButtonLabel.BackgroundTransparency = 1
-    ButtonLabel.Text = Name
-    ButtonLabel.TextColor3 = HI.Themes[HI.Config.Theme].Text
-    ButtonLabel.Font = Enum.Font.GothamSemibold
-    ButtonLabel.TextSize = HI.Config.TextSize
-    ButtonLabel.TextYAlignment = Enum.TextYAlignment.Center
-    ButtonLabel.Parent = Button
-    
-    Button.InputBegan:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-            if Callback then
-                Callback()
-            end
-        end
-    end)
-    
-    Button.MouseEnter:Connect(function()
-        Tween(Button, {BackgroundColor3 = HI.Themes[HI.Config.Theme].Accent:Lerp(Color3.new(1, 1, 1), 0.15)})
-    end)
-    
-    Button.MouseLeave:Connect(function()
-        Tween(Button, {BackgroundColor3 = HI.Themes[HI.Config.Theme].Accent})
-    end)
-    
-    return Button
-end
-
--- Color Picker (for theme customization)
-function HI:NewColorPicker(Section, Name, DefaultColor, Callback)
-    local ColorPicker = {}
-    ColorPicker.Value = DefaultColor or HI.Themes[HI.Config.Theme].Accent
-    
+function HI:AddTextBox(Section, Name, Placeholder, Callback)
     local Container = Instance.new("Frame")
-    Container.Name = Name .. "ColorPicker"
-    Container.Size = UDim2.new(1, 0, 0, 40)
+    Container.Name = Name .. "TextBox"
+    Container.Size = UDim2.new(1, 0, 0, 60)
     Container.BackgroundTransparency = 1
     Container.Parent = Section.Content
     
     local Label = Instance.new("TextLabel")
     Label.Name = "Label"
-    Label.Size = UDim2.new(1, -70, 1, 0)
+    Label.Size = UDim2.new(1, 0, 0, 25)
     Label.BackgroundTransparency = 1
     Label.Text = Name
-    Label.TextColor3 = HI.Themes[HI.Config.Theme].Text
-    Label.Font = HI.Config.Font
-    Label.TextSize = HI.Config.TextSize
+    Label.TextColor3 = HI.Themes[self.Config.Theme].Text
+    Label.Font = self.Config.Font
+    Label.TextSize = self.Config.TextSize
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = Container
     
-    -- Color Preview
-    local ColorPreview = CreateRoundedFrame(Container, UDim2.new(0, 60, 0, 30), UDim2.new(1, -65, 0.5, -15))
-    ColorPreview.BackgroundColor3 = ColorPicker.Value
-    ColorPreview.BorderSizePixel = 0
+    local TextBox = Instance.new("TextBox")
+    TextBox.Name = "TextBox"
+    TextBox.Size = UDim2.new(1, 0, 0, 30)
+    TextBox.Position = UDim2.new(0, 0, 0, 30)
+    TextBox.BackgroundColor3 = HI.Themes[self.Config.Theme].Tertiary
+    TextBox.BorderColor3 = HI.Themes[self.Config.Theme].Border
+    TextBox.BorderSizePixel = 1
+    TextBox.Text = ""
+    TextBox.PlaceholderText = Placeholder or "Enter text..."
+    TextBox.PlaceholderColor3 = HI.Themes[self.Config.Theme].SubText
+    TextBox.TextColor3 = HI.Themes[self.Config.Theme].Text
+    TextBox.Font = self.Config.Font
+    TextBox.TextSize = self.Config.TextSize
+    TextBox.ClearTextOnFocus = false
+    if self.Config.RoundedCorners then
+        local UICorner = Instance.new("UICorner")
+        UICorner.CornerRadius = UDim.new(0, 6)
+        UICorner.Parent = TextBox
+    end
+    TextBox.Parent = Container
     
-    -- Open Color Picker
-    ColorPreview.InputBegan:Connect(function(Input)
-        if Input.UserInputType == Enum.UserInputType.MouseButton1 then
-            -- Create color picker UI
-            self:CreateColorPickerUI(ColorPicker.Value, function(NewColor)
-                ColorPicker.Value = NewColor
-                Tween(ColorPreview, {BackgroundColor3 = NewColor})
-                if Callback then
-                    Callback(NewColor)
+    TextBox.Focused:Connect(function()
+        Tween(TextBox, {BorderColor3 = HI.Themes[self.Config.Theme].Accent})
+    end)
+    
+    TextBox.FocusLost:Connect(function(enterPressed)
+        Tween(TextBox, {BorderColor3 = HI.Themes[self.Config.Theme].Border})
+        if Callback then
+            Callback(TextBox.Text, enterPressed)
+        end
+    end)
+    
+    return TextBox
+end
+
+-- Search Functionality
+function HI:SearchContent(Query)
+    if not self.Config.SearchEnabled then return end
+    
+    Query = string.lower(Query)
+    
+    for TabName, Tab in pairs(self.Tabs) do
+        local TabVisible = false
+        
+        if string.find(string.lower(TabName), Query, 1, true) then
+            TabVisible = true
+        else
+            for SectionName, Section in pairs(Tab.Sections or {}) do
+                if string.find(string.lower(SectionName), Query, 1, true) then
+                    TabVisible = true
+                    break
                 end
-            end)
+            end
         end
-    end)
-    
-    return ColorPicker
-end
-
--- Create Color Picker UI
-function HI:CreateColorPickerUI(DefaultColor, Callback)
-    -- Create color picker overlay
-    local ColorPickerOverlay = Instance.new("Frame")
-    ColorPickerOverlay.Name = "ColorPickerOverlay"
-    ColorPickerOverlay.Size = UDim2.new(1, 0, 1, 0)
-    ColorPickerOverlay.BackgroundColor3 = Color3.new(0, 0, 0)
-    ColorPickerOverlay.BackgroundTransparency = 0.3
-    ColorPickerOverlay.ZIndex = 1000
-    ColorPickerOverlay.Parent = self.MainContainer
-    
-    local ColorPickerWindow = CreateRoundedFrame(ColorPickerOverlay, UDim2.new(0, 400, 0, 400), UDim2.new(0.5, -200, 0.5, -200))
-    ColorPickerWindow.BackgroundColor3 = HI.Themes[HI.Config.Theme].Main
-    ColorPickerWindow.ZIndex = 1001
-    
-    -- Close button
-    local CloseButton = Instance.new("TextButton")
-    CloseButton.Name = "CloseButton"
-    CloseButton.Size = UDim2.new(0, 30, 0, 30)
-    CloseButton.Position = UDim2.new(1, -35, 0, 5)
-    CloseButton.BackgroundTransparency = 1
-    CloseButton.Text = "×"
-    CloseButton.TextColor3 = HI.Themes[HI.Config.Theme].Text
-    CloseButton.Font = Enum.Font.GothamBold
-    CloseButton.TextSize = 20
-    CloseButton.ZIndex = 1002
-    CloseButton.Parent = ColorPickerWindow
-    
-    CloseButton.MouseButton1Click:Connect(function()
-        ColorPickerOverlay:Destroy()
-    end)
-end
-
--- Create Theme Settings Tab
-function HI:CreateThemeSettings()
-    local SettingsTab = self:NewTab("Settings", HI.Icons.Settings)
-    
-    -- Theme Selection
-    local ThemeSection = self:NewSection(SettingsTab, "Theme Selection")
-    
-    for ThemeName, ThemeColors in pairs(HI.Themes) do
-        local ThemeButton = self:NewButton(ThemeSection, ThemeName, function()
-            HI.Config.Theme = ThemeName
-            self:UpdateTheme()
-        end)
-    end
-    
-    -- Custom Colors
-    local CustomSection = self:NewSection(SettingsTab, "Custom Colors")
-    
-    self:NewColorPicker(CustomSection, "Accent Color", HI.Themes[HI.Config.Theme].Accent, function(Color)
-        HI.Themes[HI.Config.Theme].Accent = Color
-        self:UpdateTheme()
-    end)
-    
-    self:NewColorPicker(CustomSection, "Main Color", HI.Themes[HI.Config.Theme].Main, function(Color)
-        HI.Themes[HI.Config.Theme].Main = Color
-        self:UpdateTheme()
-    end)
-    
-    self:NewColorPicker(CustomSection, "Text Color", HI.Themes[HI.Config.Theme].Text, function(Color)
-        HI.Themes[HI.Config.Theme].Text = Color
-        self:UpdateTheme()
-    end)
-    
-    -- UI Settings
-    local UISection = self:NewSection(SettingsTab, "UI Settings")
-    
-    self:NewToggle(UISection, "Use Icons", HI.Config.UseIcons, function(Value)
-        HI.Config.UseIcons = Value
-    end)
-    
-    self:NewToggle(UISection, "Rounded Corners", HI.Config.RoundedCorners, function(Value)
-        HI.Config.RoundedCorners = Value
-    end)
-    
-    self:NewToggle(UISection, "Blur Background", HI.Config.BlurBackground, function(Value)
-        HI.Config.BlurBackground = Value
-        if self.BackgroundBlur then
-            self.BackgroundBlur.Enabled = Value
+        
+        if Tab.Button then
+            Tab.Button.Visible = TabVisible or Query == ""
         end
-    end)
-end
-
--- Create Football Example UI (matching your image)
-function HI:CreateFootballUI()
-    -- Create tabs with icons
-    local CatchingTab = self:NewTab("Catching", HI.Icons.Catching)
-    local PhysicsTab = self:NewTab("Physics", HI.Icons.Physics)
-    local UISettingsTab = self:NewTab("UI Settings", HI.Icons.Visual)
-    
-    -- Catching Tab
-    local MagsSection = self:NewSection(CatchingTab, "Mags")
-    self:NewSlider(MagsSection, "Range", 0, 20, 10.6, 1, function(Value)
-        print("Range:", Value)
-    end)
-    
-    local SpeedSection = self:NewSection(CatchingTab, "Speed")
-    self:NewSlider(SpeedSection, "Speed Value", 0, 1.2, 1.2, 1, function(Value)
-        print("Speed Value:", Value)
-    end)
-    
-    self:NewLabel(SpeedSection, "CFrame Speed")
-    
-    local MagTypeSection = self:NewSection(CatchingTab, "Mag Type")
-    self:NewDropdown(MagTypeSection, "Type", {"Normal", "Blatant", "FTI"}, "Blatant", function(Option)
-        print("Mag Type:", Option)
-    end)
-    
-    -- Physics Tab
-    local PullSection = self:NewSection(PhysicsTab, "Pull")
-    self:NewSlider(PullSection, "Pull Vector", 0, 3, 1.5, 1, function(Value)
-        print("Pull Vector:", Value)
-    end)
-    
-    self:NewSlider(PullSection, "Pull Vector Radius", 0, 25, 14.9, 1, function(Value)
-        print("Pull Vector Radius:", Value)
-    end)
-    
-    -- UI Settings Tab
-    local AutoCatchSection = self:NewSection(UISettingsTab, "Auto Catch")
-    self:NewSlider(AutoCatchSection, "Auto Catch Radius", 0, 25, 21.3, 1, function(Value)
-        print("Auto Catch Radius:", Value)
-    end)
-    
-    local FootballSection = self:NewSection(UISettingsTab, "Football")
-    self:NewLabel(FootballSection, "Ball Path")
-    
-    -- Add theme settings
-    self:CreateThemeSettings()
-    
-    return self
-end
-
--- Show UI
-function HI:Show()
-    self.ScreenGui.Parent = game:GetService("CoreGui") or game.Players.LocalPlayer:WaitForChild("PlayerGui")
-    if self.BackgroundBlur then
-        self.BackgroundBlur.Enabled = true
     end
-    return self
 end
 
--- Hide UI
-function HI:Hide()
-    self.ScreenGui.Enabled = false
-    if self.BackgroundBlur then
-        self.BackgroundBlur.Enabled = false
-    end
-    return self
-end
-
--- Bind to key
-function HI:BindToKey(KeyCode)
+-- Keybind System
+function HI:BindToggleKey(KeyCode)
     game:GetService("UserInputService").InputBegan:Connect(function(Input, Processed)
         if not Processed and Input.KeyCode == KeyCode then
             self:Toggle()
         end
     end)
+    return self
 end
 
+-- Customization Methods
+function HI:SetWindowSize(Size)
+    self.Config.WindowSize = Size
+    self.OriginalSize = Size
+    Tween(self.MainWindow, {Size = Size})
+    Tween(self.MainContainer, {Size = Size})
+    return self
+end
+
+function HI:SetTitle(NewTitle)
+    if self.TitleContainer then
+        local TitleLabel = self.TitleContainer:FindFirstChild("HubTitle")
+        if TitleLabel then
+            TitleLabel.Text = NewTitle
+        end
+    end
+    return self
+end
+
+function HI:SetWatermark(Text)
+    self.Config.Watermark = Text
+    if self.Watermark then
+        self.Watermark.Text = Text
+    end
+    return self
+end
+
+function HI:EnableSearch(Enabled)
+    self.Config.SearchEnabled = Enabled
+    if self.SearchContainer then
+        self.SearchContainer.Visible = Enabled
+    end
+    return self
+end
+
+function HI:SetIcon(IconId)
+    if self.TitleContainer then
+        local Icon = self.TitleContainer:FindFirstChild("HubIcon")
+        if Icon then
+            Icon.Image = IconId
+        end
+    end
+    return self
+end
+
+-- Export the library
 return HI
