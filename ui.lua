@@ -254,6 +254,7 @@ function HI:CreateUI(Title, IconId)
     -- Make Draggable
     if self.Config.Draggable then
         self:MakeDraggable(self.MainWindow)
+        
     end
     
     -- TOP BAR with Gradient
@@ -567,6 +568,15 @@ function HI:MakeDraggable(Frame)
             Update(Input)
         end
     end)
+    
+    -- Add this helper function to stop propagation on interactive elements
+    self.StopPropagation = function(Element)
+        Element.InputBegan:Connect(function(Input)
+            if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+                Input:StopPropagation()
+            end
+        end)
+    end
 end
 
 -- PUBLIC API METHODS
@@ -852,11 +862,11 @@ function HI:CreateSection(Tab, SectionName)
     Divider.Parent = Section.Frame
     
     Section.Content = Instance.new("Frame")
-    Section.Content.Name = "Content"
-    Section.Content.Size = UDim2.new(1, -20, 0, 0)
-    Section.Content.Position = UDim2.new(0, 10, 0, 55)
-    Section.Content.BackgroundTransparency = 1
-    Section.Content.Parent = Section.Frame
+Section.Content.Name = "Content"
+Section.Content.Size = UDim2.new(1, -40, 0, 0) -- Changed from -20 to -40 for more padding
+Section.Content.Position = UDim2.new(0, 20, 0, 55) -- Changed from 10 to 20
+Section.Content.BackgroundTransparency = 1
+Section.Content.Parent = Section.Frame
     
     local ContentLayout = Instance.new("UIListLayout")
     ContentLayout.Padding = UDim.new(0, 14)
@@ -991,18 +1001,7 @@ function HI:AddToggle(Section, Name, Default, Callback)
     ToggleCircle.ZIndex = 2
     
     -- Toggle glow effect
-    local ToggleGlow = Instance.new("Frame")
-    ToggleGlow.Name = "ToggleGlow"
-    ToggleGlow.Size = UDim2.new(1, 6, 1, 6)
-    ToggleGlow.Position = UDim2.new(0, -3, 0.5, -15)
-    ToggleGlow.BackgroundColor3 = HI.Themes[self.Config.Theme].Success
-    ToggleGlow.BackgroundTransparency = 0.8
-    ToggleGlow.BorderSizePixel = 0
-    ToggleGlow.Visible = Toggle.Value
-    local GlowCorner = Instance.new("UICorner")
-    GlowCorner.CornerRadius = UDim.new(1, 0)
-    GlowCorner.Parent = ToggleGlow
-    ToggleGlow.Parent = ToggleContainer
+   
     
     local function UpdateToggle()
         if Toggle.Value then
@@ -1095,10 +1094,21 @@ function HI:AddSlider(Section, Name, Min, Max, Default, Decimals, Callback)
     end
     
     -- Slider Thumb (Handle)
-    local SliderThumb = CreateRoundedFrame(Container, UDim2.new(0, 24, 0, 24), 
-        UDim2.new((Slider.Value - Min) / (Max - Min), -12, 0, 34), 12)
-    SliderThumb.BackgroundColor3 = HI.Themes[self.Config.Theme].Text
-    SliderThumb.ZIndex = 2
+   -- Change slider position to be more centered
+local SliderContainer = CreateRoundedFrame(Container, UDim2.new(1, -40, 0, 6), UDim2.new(0, 20, 0, 40), 3) -- Added left margin
+
+-- Make slider thumb larger and more visible
+local SliderThumb = CreateRoundedFrame(Container, UDim2.new(0, 28, 0, 28), 
+    UDim2.new((Slider.Value - Min) / (Max - Min), -14, 0, 34), 14) -- Bigger thumb
+
+-- Ensure thumb stays within bounds
+local function UpdateSlider(Value)
+    Value = math.clamp(Value, Min, Max)
+    Slider.Value = Value
+    local Ratio = math.clamp((Value - Min) / (Max - Min), 0, 1) -- Clamp ratio
+    
+    Tween(SliderThumb, {Position = UDim2.new(Ratio, -14, 0, 34)})
+end
     
     -- Thumb glow
     local ThumbGlow = Instance.new("Frame")
@@ -1160,6 +1170,7 @@ function HI:AddSlider(Section, Name, Min, Max, Default, Decimals, Callback)
     
     SliderThumb.InputBegan:Connect(function(Input)
         if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+                Input:StopPropagation()
             StartDrag()
         end
     end)
